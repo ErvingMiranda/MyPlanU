@@ -25,6 +25,7 @@ class Recordatorio(SQLModel, table=True):
     EventoId: int = Field(foreign_key="evento.Id")
     FechaHora: datetime
     Canal: str = Field(regex="^(Local|Push)$")
+    Mensaje: Optional[str] = None
     Enviado: bool = False
     CreadoEn: datetime = Field(default_factory=datetime.utcnow)
     EliminadoEn: Optional[datetime] = None

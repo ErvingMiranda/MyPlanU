@@ -99,10 +99,18 @@ def CrearRecordatorio(
     EventoId: int,
     FechaHora: datetime,
     Canal: str,
+    Mensaje: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    Entidad = Recordatorios.CrearRecordatorio(SesionBD, EventoId=EventoId, FechaHora=FechaHora, Canal=Canal, Rol=Rol)
+    Entidad = Recordatorios.CrearRecordatorio(
+        SesionBD,
+        EventoId=EventoId,
+        FechaHora=FechaHora,
+        Canal=Canal,
+        Mensaje=Mensaje,
+        Rol=Rol,
+    )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Datos invalidos (evento inexistente o FechaHora en pasado)")
     return Entidad
@@ -122,10 +130,19 @@ def ActualizarRecordatorio(
     FechaHora: Optional[datetime] = None,
     Canal: Optional[str] = None,
     Enviado: Optional[bool] = None,
+    Mensaje: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    Entidad = Recordatorios.ActualizarRecordatorio(SesionBD, Id, FechaHora=FechaHora, Canal=Canal, Enviado=Enviado, Rol=Rol)
+    Entidad = Recordatorios.ActualizarRecordatorio(
+        SesionBD,
+        Id,
+        FechaHora=FechaHora,
+        Canal=Canal,
+        Enviado=Enviado,
+        Mensaje=Mensaje,
+        Rol=Rol,
+    )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Recordatorio no encontrado o invalido (FechaHora en pasado)")
     return Entidad
@@ -137,3 +154,10 @@ def EliminarRecordatorio(Id: int, Rol: RolParticipante = RolParticipante.Dueno, 
     if not Exito:
         raise HTTPException(status_code=403, detail="No permitido o recordatorio no encontrado")
     return {"ok": True}
+
+
+@Router.get("/recordatorios/proximos")
+def ListarRecordatoriosProximos(dias: int = 7, SesionBD: Session = Depends(ObtenerSesion)):
+    if dias <= 0:
+        dias = 7
+    return Recordatorios.ListarProximos(SesionBD, dias=dias)

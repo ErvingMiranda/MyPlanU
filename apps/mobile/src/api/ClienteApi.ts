@@ -54,3 +54,34 @@ export async function ActualizarEvento(Id: number, cambios: Partial<Omit<Evento,
   if (!r.ok) throw new Error('Error al actualizar evento');
   return r.json();
 }
+
+export type Recordatorio = {
+  Id: number;
+  EventoId: number;
+  FechaHora: string; // ISO
+  Canal: 'Local' | 'Push';
+  Mensaje?: string | null;
+  Enviado: boolean;
+  CreadoEn: string;
+  EliminadoEn?: string | null;
+};
+
+export async function ObtenerRecordatorios(): Promise<Recordatorio[]> {
+  const r = await fetch(`${ApiUrl}/recordatorios`);
+  if (!r.ok) throw new Error('Error al cargar recordatorios');
+  return r.json();
+}
+
+export async function ObtenerRecordatoriosProximos(dias = 7): Promise<Recordatorio[]> {
+  const r = await fetch(`${ApiUrl}/recordatorios/proximos?dias=${dias}`);
+  if (!r.ok) throw new Error('Error al cargar recordatorios proximos');
+  return r.json();
+}
+
+export async function CrearRecordatorio(datos: Omit<Recordatorio,'Id'|'CreadoEn'|'EliminadoEn'|'Enviado'>): Promise<Recordatorio> {
+  const params = new URLSearchParams();
+  Object.entries(datos).forEach(([k,v]) => params.append(k, String(v)));
+  const r = await fetch(`${ApiUrl}/recordatorios?${params.toString()}`, { method: 'POST' });
+  if (!r.ok) throw new Error('Error al crear recordatorio');
+  return r.json();
+}

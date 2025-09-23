@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.8
+MyPlanU v0.9
 =================
 
 Descripcion
@@ -124,6 +124,15 @@ v0.8
   - Boton "Editar" → CrearEditarEventoScreen con datos pre-cargados.
   - Validacion UI simple: Inicio < Fin.
 - API consumida: GET /eventos; POST/PATCH /eventos para crear/editar (sin permisos reales aun).
+
+v0.9
+- Backend:
+  - Recordatorio ahora tiene campo opcional Mensaje.
+  - Nuevo endpoint: GET /recordatorios/proximos?dias=7 para listar recordatorios futuros (por defecto 7 dias).
+- Movil:
+  - NotificacionesScreen ahora lista recordatorios proximos desde la API y muestra un contador de "tiempo restante" (min/horas).
+  - Formulario rapido para crear un Recordatorio (EventoId, FechaHora en ISO, Mensaje opcional) y refrescar la lista.
+- Nota TODO: Integrar Expo Notifications (notificaciones locales) en la siguiente version.
 
 TODOs siguientes (planeados)
 ----------------------------

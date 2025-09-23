@@ -12,6 +12,16 @@ def IniciarTablas() -> None:
     from app.models import Goal  # noqa: F401  # Usuario, Meta
     from app.models.Evento import Evento, Recordatorio  # noqa: F401
     SQLModel.metadata.create_all(Motor)
+    # Migracion simple para agregar columna 'Mensaje' en 'recordatorio' si no existe (SQLite)
+    try:
+        with Motor.connect() as conn:  # type: ignore[attr-defined]
+            res = conn.exec_driver_sql("PRAGMA table_info('recordatorio')").fetchall()
+            columnas = {row[1] for row in res} if res else set()
+            if 'Mensaje' not in columnas:
+                conn.exec_driver_sql("ALTER TABLE recordatorio ADD COLUMN Mensaje VARCHAR NULL")
+    except Exception:
+        # Fallback silencioso; en entornos limpios la tabla se crea con la columna
+        pass
 
 
 def ObtenerSesion() -> Generator[Session, None, None]:

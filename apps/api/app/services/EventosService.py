@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlmodel import Session, select
 
@@ -121,6 +121,7 @@ class RecordatoriosService:
         EventoId: int,
         FechaHora: datetime,
         Canal: str,
+        Mensaje: Optional[str] = None,
         Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Recordatorio]:
         # Permisos: Dueno/Colaborador pueden crear; Lector no
@@ -133,7 +134,7 @@ class RecordatoriosService:
         EventoEntidad = SesionBD.get(Evento, EventoId)
         if not EventoEntidad or EventoEntidad.EliminadoEn is not None:
             return None
-        Entidad = Recordatorio(EventoId=EventoId, FechaHora=FechaHora, Canal=Canal)
+        Entidad = Recordatorio(EventoId=EventoId, FechaHora=FechaHora, Canal=Canal, Mensaje=Mensaje)
         SesionBD.add(Entidad)
         SesionBD.commit()
         SesionBD.refresh(Entidad)
@@ -153,6 +154,7 @@ class RecordatoriosService:
         FechaHora: Optional[datetime] = None,
         Canal: Optional[str] = None,
         Enviado: Optional[bool] = None,
+        Mensaje: Optional[str] = None,
         Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Recordatorio]:
         # Permisos: Dueno/Colaborador pueden actualizar; Lector no
@@ -169,11 +171,23 @@ class RecordatoriosService:
             Entidad.Canal = Canal
         if Enviado is not None:
             Entidad.Enviado = Enviado
+        if Mensaje is not None:
+            Entidad.Mensaje = Mensaje
         # No hay actualizadoEn en recordatorio por requerimiento
         SesionBD.add(Entidad)
         SesionBD.commit()
         SesionBD.refresh(Entidad)
         return Entidad
+
+    def ListarProximos(self, SesionBD: Session, dias: int = 7) -> List[Recordatorio]:
+        ahora = datetime.utcnow().replace(microsecond=0)
+        futuro = ahora + timedelta(days=dias)
+        Consulta = select(Recordatorio).where(
+            Recordatorio.EliminadoEn.is_(None),
+            Recordatorio.FechaHora >= ahora,
+            Recordatorio.FechaHora <= futuro,
+        )
+        return list(SesionBD.exec(Consulta))
 
     def EliminarRecordatorio(self, SesionBD: Session, Id: int, Rol: RolParticipante = RolParticipante.Dueno) -> bool:
         # Permisos: por defecto solo Dueno puede eliminar
