@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "MyPlanU",
+    "slug": "myplanu",
+    "version": "0.1.0",
+    "platforms": ["ios", "android", "web"],
+    "orientation": "portrait",
+    "assetBundlePatterns": ["**/*"]
+  }
+}

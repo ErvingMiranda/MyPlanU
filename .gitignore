@@ -1,0 +1,51 @@
+# General
+.DS_Store
+**/.DS_Store
+*.log
+*.tmp
+tmp/
+temp/
+.env
+.env.*
+.venv
+venv/
+ENV/
+.idea/
+.vscode/
+dist/
+build/
+coverage/
+*.db
+*.sqlite
+*.sqlite3
+apps/api/datos.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage*
+.hypothesis/
+
+# Node / React Native / Expo
+node_modules/
+*.expo/
+.expo/
+.expo-shared/
+web-build/
+*.keystore
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# OS/Editor
+Thumbs.db
+ehthumbs.db
+*.swp
+*.swo
