@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert } from 'react-native';
+import { createGoal } from '../services/goals';
+import { useNavigation } from '@react-navigation/native';
 
 export default function CrearEditarMetaScreen(): JSX.Element {
+  const navigation = useNavigation<any>();
   const [Titulo, EstablecerTitulo] = useState('');
   const [TipoMeta, EstablecerTipoMeta] = useState('SALUD');
   const [Descripcion, EstablecerDescripcion] = useState('');
+  const [Guardando, SetGuardando] = useState(false);
 
   return (
     <View style={Estilos.Contenedor}>
@@ -16,8 +20,20 @@ export default function CrearEditarMetaScreen(): JSX.Element {
       <Text>Descripcion</Text>
       <TextInput style={[Estilos.Input, { height: 80 }]} value={Descripcion} onChangeText={EstablecerDescripcion} multiline />
       <View style={Estilos.Acciones}>
-        <Button title="Guardar" onPress={() => Alert.alert('Pendiente', 'Persistencia no implementada en v0.4')} />
-        <Button title="Cancelar" onPress={() => Alert.alert('Cancelado')} />
+        <Button title={Guardando ? 'Guardando…' : 'Guardar'} disabled={Guardando} onPress={async () => {
+          try {
+            if (!Titulo.trim()) { Alert.alert('Validación', 'El título es requerido'); return; }
+            SetGuardando(true);
+            await createGoal({ Titulo, TipoMeta, Descripcion, PropietarioId: 1 });
+            Alert.alert('Éxito', 'Meta guardada');
+            navigation.goBack();
+          } catch (e: any) {
+            Alert.alert('Error', e?.message ?? 'No se pudo guardar la meta');
+          } finally {
+            SetGuardando(false);
+          }
+        }} />
+        <Button title="Cancelar" onPress={() => navigation.goBack()} />
       </View>
     </View>
   );

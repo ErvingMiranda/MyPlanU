@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Button } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { APP_VERSION } from '../version';
 import { ObtenerMetas, Meta } from '../api/ClienteApi';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -11,6 +12,7 @@ export default function PrincipalScreen({ navigation }: Props): JSX.Element {
 
   return (
     <View style={Estilos.Contenedor}>
+      <Text style={Estilos.Version}>MyPlanU {APP_VERSION}</Text>
       <View style={Estilos.BarraAcciones}>
         <Button title="+" onPress={() => navigation.navigate('CrearEditarMeta')} />
   <Button title="VerEventos" onPress={() => navigation.navigate('ListaEventos')} />
@@ -37,6 +39,7 @@ export default function PrincipalScreen({ navigation }: Props): JSX.Element {
 
 const Estilos = StyleSheet.create({
   Contenedor: { flex: 1, padding: 16 },
+  Version: { fontSize: 12, color: '#666', marginBottom: 6, textAlign: 'right' },
   BarraAcciones: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   Item: { padding: 12, borderRadius: 8, backgroundColor: '#f2f2f2', marginBottom: 8 },
   Titulo: { fontSize: 18, fontWeight: '600' },
