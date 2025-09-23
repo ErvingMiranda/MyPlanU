@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from sqlmodel import Session, select
@@ -55,6 +55,108 @@ class EventosService:
     def ListarEventos(self, SesionBD: Session) -> List[Evento]:
         Consulta = select(Evento).where(Evento.EliminadoEn.is_(None))
         return list(SesionBD.exec(Consulta))
+
+    def _ParseDiasSemana(self, dias_csv: Optional[str]) -> List[int]:
+        mapa = {
+            'Lun': 0,
+            'Mar': 1,
+            'Mie': 2,
+            'Jue': 3,
+            'Vie': 4,
+            'Sab': 5,
+            'Dom': 6,
+        }
+        if not dias_csv:
+            return []
+        return [mapa[d.strip()] for d in dias_csv.split(',') if d.strip() in mapa]
+
+    def ProyectarOcurrencias(
+        self,
+        SesionBD: Session,
+        Desde: datetime,
+        Hasta: datetime,
+    ) -> List[Dict[str, Any]]:
+        if Hasta <= Desde:
+            return []
+        ahora = datetime.utcnow()
+        # Consideramos eventos no eliminados
+        eventos = self.ListarEventos(SesionBD)
+        ocurrencias: List[Dict[str, Any]] = []
+        for ev in eventos:
+            # Ocurrencia base (no repetido)
+            base_ini = ev.Inicio
+            base_fin = ev.Fin
+            # Validacion de ventana
+            if base_ini >= base_fin:
+                continue
+            freq = ev.FrecuenciaRepeticion
+            intervalo = ev.IntervaloRepeticion or 1
+            if not freq:
+                # Evento simple: incluir si cruza el rango
+                if base_fin >= Desde and base_ini <= Hasta and base_fin >= ahora:
+                    ocurrencias.append({
+                        'Titulo': ev.Titulo,
+                        'Inicio': base_ini,
+                        'Fin': base_fin,
+                        'EventoId': ev.Id,
+                    })
+                continue
+            # Expandir segun frecuencia
+            cur_ini = base_ini
+            cur_fin = base_fin
+            # Empujar cur_ini a >= Desde si posible por saltos de intervalo
+            # Iterar con limite de seguridad
+            max_iters = 1000
+            if freq == 'Diaria':
+                delta = timedelta(days=intervalo)
+                # avanzar hasta el rango
+                while cur_fin < Desde and max_iters > 0:
+                    cur_ini += delta
+                    cur_fin += delta
+                    max_iters -= 1
+                while cur_ini <= Hasta and max_iters > 0:
+                    if cur_fin >= Desde and cur_fin >= ahora:
+                        ocurrencias.append({'Titulo': ev.Titulo, 'Inicio': cur_ini, 'Fin': cur_fin, 'EventoId': ev.Id})
+                    cur_ini += delta
+                    cur_fin += delta
+                    max_iters -= 1
+            elif freq == 'Semanal':
+                dias = self._ParseDiasSemana(ev.DiasSemana)
+                if not dias:
+                    dias = [base_ini.weekday()]  # si no hay lista, usa el del inicio
+                # Encontrar la primera semana que cae en rango
+                semana_delta = timedelta(weeks=intervalo)
+                # anclar a inicio de semana del base_ini (lunes=0)
+                base_week_start = base_ini - timedelta(days=base_ini.weekday())
+                cur_week_start = base_week_start
+                while cur_week_start + timedelta(days=6) < Desde and max_iters > 0:
+                    cur_week_start += semana_delta
+                    max_iters -= 1
+                while cur_week_start <= Hasta and max_iters > 0:
+                    for d in dias:
+                        occ_ini = cur_week_start + timedelta(days=d, hours=base_ini.hour, minutes=base_ini.minute, seconds=base_ini.second)
+                        dur = base_fin - base_ini
+                        occ_fin = occ_ini + dur
+                        if occ_fin >= Desde and occ_ini <= Hasta and occ_fin >= ahora:
+                            ocurrencias.append({'Titulo': ev.Titulo, 'Inicio': occ_ini, 'Fin': occ_fin, 'EventoId': ev.Id})
+                    cur_week_start += semana_delta
+                    max_iters -= 1
+            elif freq == 'Mensual':
+                # aproximacion simple por meses de 30 dias
+                delta = timedelta(days=30 * intervalo)
+                while cur_fin < Desde and max_iters > 0:
+                    cur_ini += delta
+                    cur_fin += delta
+                    max_iters -= 1
+                while cur_ini <= Hasta and max_iters > 0:
+                    if cur_fin >= Desde and cur_fin >= ahora:
+                        ocurrencias.append({'Titulo': ev.Titulo, 'Inicio': cur_ini, 'Fin': cur_fin, 'EventoId': ev.Id})
+                    cur_ini += delta
+                    cur_fin += delta
+                    max_iters -= 1
+        # ordenar por inicio
+        ocurrencias.sort(key=lambda x: x['Inicio'])
+        return ocurrencias
 
     def Obtener(self, SesionBD: Session, Id: int) -> Optional[Evento]:
         return SesionBD.get(Evento, Id)
@@ -123,6 +225,9 @@ class RecordatoriosService:
         FechaHora: datetime,
         Canal: str,
         Mensaje: Optional[str] = None,
+        FrecuenciaRepeticion: Optional[str] = None,
+        IntervaloRepeticion: Optional[int] = None,
+        DiasSemana: Optional[str] = None,
         Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Recordatorio]:
         # Permisos: Dueno/Colaborador pueden crear; Lector no
@@ -135,7 +240,15 @@ class RecordatoriosService:
         EventoEntidad = SesionBD.get(Evento, EventoId)
         if not EventoEntidad or EventoEntidad.EliminadoEn is not None:
             return None
-        Entidad = Recordatorio(EventoId=EventoId, FechaHora=FechaHora, Canal=Canal, Mensaje=Mensaje)
+        Entidad = Recordatorio(
+            EventoId=EventoId,
+            FechaHora=FechaHora,
+            Canal=Canal,
+            Mensaje=Mensaje,
+            FrecuenciaRepeticion=FrecuenciaRepeticion,
+            IntervaloRepeticion=IntervaloRepeticion,
+            DiasSemana=DiasSemana,
+        )
         SesionBD.add(Entidad)
         SesionBD.commit()
         SesionBD.refresh(Entidad)
@@ -156,6 +269,9 @@ class RecordatoriosService:
         Canal: Optional[str] = None,
         Enviado: Optional[bool] = None,
         Mensaje: Optional[str] = None,
+        FrecuenciaRepeticion: Optional[str] = None,
+        IntervaloRepeticion: Optional[int] = None,
+        DiasSemana: Optional[str] = None,
         Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Recordatorio]:
         # Permisos: Dueno/Colaborador pueden actualizar; Lector no
@@ -174,11 +290,76 @@ class RecordatoriosService:
             Entidad.Enviado = Enviado
         if Mensaje is not None:
             Entidad.Mensaje = Mensaje
+        if FrecuenciaRepeticion is not None:
+            Entidad.FrecuenciaRepeticion = FrecuenciaRepeticion
+        if IntervaloRepeticion is not None:
+            Entidad.IntervaloRepeticion = IntervaloRepeticion
+        if DiasSemana is not None:
+            Entidad.DiasSemana = DiasSemana
         # No hay actualizadoEn en recordatorio por requerimiento
         SesionBD.add(Entidad)
         SesionBD.commit()
         SesionBD.refresh(Entidad)
         return Entidad
+
+    def CalcularProximasFechas(
+        self,
+        Entidad: Recordatorio,
+        Desde: datetime,
+        Hasta: datetime,
+    ) -> List[datetime]:
+        if Hasta <= Desde:
+            return []
+        ahora = datetime.utcnow()
+        fechas: List[datetime] = []
+        freq = Entidad.FrecuenciaRepeticion
+        if not freq:
+            if Entidad.FechaHora >= Desde and Entidad.FechaHora <= Hasta and Entidad.FechaHora >= ahora:
+                return [Entidad.FechaHora]
+            return []
+        intervalo = Entidad.IntervaloRepeticion or 1
+        base = Entidad.FechaHora
+        max_iters = 1000
+        if freq == 'Diaria':
+            delta = timedelta(days=intervalo)
+            cur = base
+            while cur < Desde and max_iters > 0:
+                cur += delta
+                max_iters -= 1
+            while cur <= Hasta and max_iters > 0:
+                if cur >= Desde and cur >= ahora:
+                    fechas.append(cur)
+                cur += delta
+                max_iters -= 1
+        elif freq == 'Semanal':
+            dias = EventosService()._ParseDiasSemana(Entidad.DiasSemana)
+            if not dias:
+                dias = [base.weekday()]
+            semana_delta = timedelta(weeks=intervalo)
+            base_week_start = base - timedelta(days=base.weekday())
+            cur_week_start = base_week_start
+            while cur_week_start + timedelta(days=6) < Desde and max_iters > 0:
+                cur_week_start += semana_delta
+                max_iters -= 1
+            while cur_week_start <= Hasta and max_iters > 0:
+                for d in dias:
+                    occ = cur_week_start + timedelta(days=d, hours=base.hour, minutes=base.minute, seconds=base.second)
+                    if occ >= Desde and occ <= Hasta and occ >= ahora:
+                        fechas.append(occ)
+                cur_week_start += semana_delta
+                max_iters -= 1
+        elif freq == 'Mensual':
+            delta = timedelta(days=30 * intervalo)
+            cur = base
+            while cur < Desde and max_iters > 0:
+                cur += delta
+                max_iters -= 1
+            while cur <= Hasta and max_iters > 0:
+                if cur >= Desde and cur >= ahora:
+                    fechas.append(cur)
+                cur += delta
+                max_iters -= 1
+        return fechas
 
     def ListarProximos(self, SesionBD: Session, dias: int = 7) -> List[Recordatorio]:
         ahora = datetime.utcnow().replace(microsecond=0)

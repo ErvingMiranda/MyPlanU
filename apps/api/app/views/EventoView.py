@@ -27,6 +27,17 @@ def ListarEventos(SesionBD: Session = Depends(ObtenerSesion)):
     return Eventos.ListarEventos(SesionBD)
 
 
+@Router.get("/eventos/proximos")
+def ListarEventosProximos(
+    Desde: datetime,
+    Hasta: datetime,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
+    if Hasta <= Desde:
+        raise HTTPException(status_code=400, detail="Rango invalido")
+    return Eventos.ProyectarOcurrencias(SesionBD, Desde=Desde, Hasta=Hasta)
+
+
 @Router.post("/eventos")
 def CrearEvento(
     MetaId: int,
@@ -102,6 +113,9 @@ def CrearRecordatorio(
     FechaHora: datetime,
     Canal: str,
     Mensaje: Optional[str] = None,
+    FrecuenciaRepeticion: Optional[str] = None,
+    IntervaloRepeticion: Optional[int] = None,
+    DiasSemana: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
@@ -111,6 +125,9 @@ def CrearRecordatorio(
         FechaHora=FechaHora,
         Canal=Canal,
         Mensaje=Mensaje,
+        FrecuenciaRepeticion=FrecuenciaRepeticion,
+        IntervaloRepeticion=IntervaloRepeticion,
+        DiasSemana=DiasSemana,
         Rol=Rol,
     )
     if Entidad is None:
@@ -133,6 +150,9 @@ def ActualizarRecordatorio(
     Canal: Optional[str] = None,
     Enviado: Optional[bool] = None,
     Mensaje: Optional[str] = None,
+    FrecuenciaRepeticion: Optional[str] = None,
+    IntervaloRepeticion: Optional[int] = None,
+    DiasSemana: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
@@ -143,6 +163,9 @@ def ActualizarRecordatorio(
         Canal=Canal,
         Enviado=Enviado,
         Mensaje=Mensaje,
+        FrecuenciaRepeticion=FrecuenciaRepeticion,
+        IntervaloRepeticion=IntervaloRepeticion,
+        DiasSemana=DiasSemana,
         Rol=Rol,
     )
     if Entidad is None:

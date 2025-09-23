@@ -19,6 +19,22 @@ def IniciarTablas() -> None:
             columnas = {row[1] for row in res} if res else set()
             if 'Mensaje' not in columnas:
                 conn.exec_driver_sql("ALTER TABLE recordatorio ADD COLUMN Mensaje VARCHAR NULL")
+            # Repeticion en recordatorio
+            if 'FrecuenciaRepeticion' not in columnas:
+                conn.exec_driver_sql("ALTER TABLE recordatorio ADD COLUMN FrecuenciaRepeticion VARCHAR NULL")
+            if 'IntervaloRepeticion' not in columnas:
+                conn.exec_driver_sql("ALTER TABLE recordatorio ADD COLUMN IntervaloRepeticion INTEGER NULL")
+            if 'DiasSemana' not in columnas:
+                conn.exec_driver_sql("ALTER TABLE recordatorio ADD COLUMN DiasSemana VARCHAR NULL")
+            # Repeticion en evento
+            res_e = conn.exec_driver_sql("PRAGMA table_info('evento')").fetchall()
+            cols_e = {row[1] for row in res_e} if res_e else set()
+            if 'FrecuenciaRepeticion' not in cols_e:
+                conn.exec_driver_sql("ALTER TABLE evento ADD COLUMN FrecuenciaRepeticion VARCHAR NULL")
+            if 'IntervaloRepeticion' not in cols_e:
+                conn.exec_driver_sql("ALTER TABLE evento ADD COLUMN IntervaloRepeticion INTEGER NULL")
+            if 'DiasSemana' not in cols_e:
+                conn.exec_driver_sql("ALTER TABLE evento ADD COLUMN DiasSemana VARCHAR NULL")
     except Exception:
         # Fallback silencioso; en entornos limpios la tabla se crea con la columna
         pass

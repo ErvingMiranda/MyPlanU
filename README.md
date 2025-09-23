@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.10
+MyPlanU v0.11
 =================
 
 Descripcion
@@ -147,6 +147,15 @@ v0.10
   - EventosService: al eliminar evento, se dejo TODO para notificar a participantes.
 - Movil:
   - DetalleEventoScreen muestra seccion de Participantes (mock temporal) y boton "AgregarParticipante" (placeholder sin logica).
+
+v0.11
+- Backend:
+  - Repeticion en Evento y Recordatorio: campos FrecuenciaRepeticion ('Diaria','Semanal','Mensual'), IntervaloRepeticion (int), DiasSemana (CSV, ej. "Lun,Mie").
+  - Proyeccion de ocurrencias sin persistir: GET /eventos/proximos?Desde=...&Hasta=... devuelve ocurrencias (Titulo, Inicio, Fin, EventoId).
+  - Recordatorio acepta tambien repeticion y puede calcular proximas fechas (no se crean en pasado; solo proximas).
+- Criterios rapidos:
+  - Crear Evento semanal con DiasSemana=['Lun','Mie'] y consultar /eventos/proximos devuelve ocurrencias en esos dias dentro del rango.
+  - Recordatorio con repeticion calcula proximas fechas dentro del rango futuro.
 
 TODOs siguientes (planeados)
 ----------------------------

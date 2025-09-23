@@ -13,6 +13,10 @@ class Evento(SQLModel, table=True):
     Inicio: datetime
     Fin: datetime
     Ubicacion: Optional[str] = None
+    # Repeticion (opcional)
+    FrecuenciaRepeticion: Optional[str] = Field(default=None, regex="^(Diaria|Semanal|Mensual)$")
+    IntervaloRepeticion: Optional[int] = None  # cada N unidades
+    DiasSemana: Optional[str] = None  # CSV: "Lun,Mar,Mie" (solo para Semanal)
     CreadoEn: datetime = Field(default_factory=datetime.utcnow)
     ActualizadoEn: Optional[datetime] = None
     EliminadoEn: Optional[datetime] = None
@@ -26,6 +30,10 @@ class Recordatorio(SQLModel, table=True):
     FechaHora: datetime
     Canal: str = Field(regex="^(Local|Push)$")
     Mensaje: Optional[str] = None
+    # Repeticion (opcional)
+    FrecuenciaRepeticion: Optional[str] = Field(default=None, regex="^(Diaria|Semanal|Mensual)$")
+    IntervaloRepeticion: Optional[int] = None
+    DiasSemana: Optional[str] = None
     Enviado: bool = False
     CreadoEn: datetime = Field(default_factory=datetime.utcnow)
     EliminadoEn: Optional[datetime] = None
