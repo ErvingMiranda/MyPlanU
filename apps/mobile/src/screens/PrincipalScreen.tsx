@@ -13,7 +13,8 @@ export default function PrincipalScreen({ navigation }: Props): JSX.Element {
     <View style={Estilos.Contenedor}>
       <View style={Estilos.BarraAcciones}>
         <Button title="+" onPress={() => navigation.navigate('CrearEditarMeta')} />
-        <Button title="Notificaciones" onPress={() => navigation.navigate('Notificaciones')} />
+  <Button title="VerEventos" onPress={() => navigation.navigate('ListaEventos')} />
+  <Button title="Notificaciones" onPress={() => navigation.navigate('Notificaciones')} />
         <Button title="Configuracion" onPress={() => navigation.navigate('Configuracion')} />
         <Button title="CerrarSesion" onPress={() => navigation.replace('LoginRegistro')} />
       </View>

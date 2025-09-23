@@ -10,6 +10,9 @@ import DetalleMetaScreen from './src/screens/DetalleMetaScreen';
 import CrearEditarMetaScreen from './src/screens/CrearEditarMetaScreen';
 import NotificacionesScreen from './src/screens/NotificacionesScreen';
 import ConfiguracionScreen from './src/screens/ConfiguracionScreen';
+import ListaEventosScreen from './src/screens/ListaEventosScreen';
+import DetalleEventoScreen from './src/screens/DetalleEventoScreen';
+import CrearEditarEventoScreen from './src/screens/CrearEditarEventoScreen';
 
 const Cliente = new QueryClient();
 
@@ -35,6 +38,9 @@ export default function AplicacionMovil(): JSX.Element {
           <Stack.Screen name="Principal" component={TabsPrincipales} options={{ headerShown: false }} />
           <Stack.Screen name="DetalleMeta" component={DetalleMetaScreen} options={{ title: 'Detalle de Meta' }} />
           <Stack.Screen name="CrearEditarMeta" component={CrearEditarMetaScreen} options={{ title: 'Crear/Editar Meta' }} />
+          <Stack.Screen name="ListaEventos" component={ListaEventosScreen} options={{ title: 'Eventos' }} />
+          <Stack.Screen name="DetalleEvento" component={DetalleEventoScreen} options={{ title: 'Detalle de Evento' }} />
+          <Stack.Screen name="CrearEditarEvento" component={CrearEditarEventoScreen} options={{ title: 'Crear/Editar Evento' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>

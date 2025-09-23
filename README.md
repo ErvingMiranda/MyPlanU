@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.7
+MyPlanU v0.8
 =================
 
 Descripcion
@@ -114,6 +114,16 @@ v0.7
   - Permisos: Dueno = CRUD total; Colaborador = crear/leer/actualizar; Lector = solo lectura.
   - Bloquear eliminar si rol != Dueno.
   - Reglas vigentes: Inicio < Fin; Recordatorio no en pasado; existencia de Meta/Propietario/Evento.
+
+v0.8
+- App movil: lista y detalle de eventos; crear/editar.
+- Pantallas nuevas: ListaEventosScreen, DetalleEventoScreen, CrearEditarEventoScreen.
+- Navegacion: desde PrincipalScreen → "VerEventos" abre ListaEventosScreen.
+- Interaccion:
+  - Lista toca item → DetalleEventoScreen (muestra Titulo, Inicio, Fin, etc.).
+  - Boton "Editar" → CrearEditarEventoScreen con datos pre-cargados.
+  - Validacion UI simple: Inicio < Fin.
+- API consumida: GET /eventos; POST/PATCH /eventos para crear/editar (sin permisos reales aun).
 
 TODOs siguientes (planeados)
 ----------------------------

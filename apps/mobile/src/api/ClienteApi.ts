@@ -16,3 +16,41 @@ export async function ObtenerMetas(): Promise<Meta[]> {
   if (!r.ok) throw new Error('Error al cargar metas');
   return r.json();
 }
+
+export type Evento = {
+  Id: number;
+  MetaId: number;
+  PropietarioId: number;
+  Titulo: string;
+  Descripcion?: string | null;
+  Inicio: string; // ISO
+  Fin: string; // ISO
+  Ubicacion?: string | null;
+  CreadoEn: string;
+  ActualizadoEn?: string | null;
+  EliminadoEn?: string | null;
+};
+
+export async function ObtenerEventos(): Promise<Evento[]> {
+  const r = await fetch(`${ApiUrl}/eventos`);
+  if (!r.ok) throw new Error('Error al cargar eventos');
+  return r.json();
+}
+
+export async function CrearEvento(datos: Omit<Evento, 'Id'|'CreadoEn'|'ActualizadoEn'|'EliminadoEn'>): Promise<Evento> {
+  const params = new URLSearchParams();
+  Object.entries(datos).forEach(([k,v]) => params.append(k, String(v)));
+  const r = await fetch(`${ApiUrl}/eventos?${params.toString()}`, { method: 'POST' });
+  if (!r.ok) throw new Error('Error al crear evento');
+  return r.json();
+}
+
+export async function ActualizarEvento(Id: number, cambios: Partial<Omit<Evento,'Id'|'CreadoEn'|'EliminadoEn'>>): Promise<Evento> {
+  const params = new URLSearchParams();
+  Object.entries(cambios).forEach(([k,v]) => {
+    if (v !== undefined && v !== null) params.append(k, String(v));
+  });
+  const r = await fetch(`${ApiUrl}/eventos/${Id}?${params.toString()}`, { method: 'PATCH' });
+  if (!r.ok) throw new Error('Error al actualizar evento');
+  return r.json();
+}
