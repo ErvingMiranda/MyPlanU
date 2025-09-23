@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.13.2
+MyPlanU v0.13.6
 =================
 
 Descripcion
@@ -209,6 +209,11 @@ v0.13.2
   - Movil: nuevo cliente HTTP en `apps/mobile/src/api/http.ts` (Axios) que lee API_BASE_URL y EXPO_PUBLIC_API_URL.
   - Agrega `apps/mobile/.env.example` con API_BASE_URL. En simulador usa 127.0.0.1; en dispositivo fisico, usa la IP LAN de tu maquina (ej. http://192.168.1.10:8000).
   - Funcion `ping()` consulta /health y cae a /salud. Reemplazar mensajes genericos de red por un toast con sugerencia de revisar URL o conectividad.
+
+v0.13.6
+- Pantalla Configuracion con conectividad:
+  - Nuevo botón “Probar conexión” que llama ping() y muestra estado.
+  - Campo editable de API_BASE_URL (solo dev) que se persiste en almacenamiento y actualiza baseURL de Axios en caliente.
 
 TODOs siguientes (planeados)
 ----------------------------
