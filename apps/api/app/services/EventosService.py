@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from app.models.Evento import Evento, Recordatorio
 from app.models.Goal import Meta
 from app.services.UsuariosService import UsuariosService
+from app.core.Permisos import RolParticipante
 
 
 class EventosService:
@@ -22,7 +23,11 @@ class EventosService:
         Fin: datetime,
         Descripcion: Optional[str] = None,
         Ubicacion: Optional[str] = None,
+        Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Evento]:
+        # Permisos: Dueno/Colaborador pueden crear; Lector no
+        if Rol == RolParticipante.Lector:
+            return None
         # Validaciones: Inicio < Fin
         if not (Inicio < Fin):
             return None
@@ -63,7 +68,11 @@ class EventosService:
         Inicio: Optional[datetime] = None,
         Fin: Optional[datetime] = None,
         Ubicacion: Optional[str] = None,
+        Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Evento]:
+        # Permisos: Dueno/Colaborador pueden actualizar; Lector no
+        if Rol == RolParticipante.Lector:
+            return None
         Entidad = SesionBD.get(Evento, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return None
@@ -86,7 +95,10 @@ class EventosService:
         SesionBD.refresh(Entidad)
         return Entidad
 
-    def EliminarEvento(self, SesionBD: Session, Id: int) -> bool:
+    def EliminarEvento(self, SesionBD: Session, Id: int, Rol: RolParticipante = RolParticipante.Dueno) -> bool:
+        # Permisos: solo Dueno puede eliminar
+        if Rol != RolParticipante.Dueno:
+            return False
         Entidad = SesionBD.get(Evento, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return False
@@ -109,7 +121,11 @@ class RecordatoriosService:
         EventoId: int,
         FechaHora: datetime,
         Canal: str,
+        Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Recordatorio]:
+        # Permisos: Dueno/Colaborador pueden crear; Lector no
+        if Rol == RolParticipante.Lector:
+            return None
         # No crear en el pasado
         if FechaHora < datetime.utcnow():
             return None
@@ -137,7 +153,11 @@ class RecordatoriosService:
         FechaHora: Optional[datetime] = None,
         Canal: Optional[str] = None,
         Enviado: Optional[bool] = None,
+        Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Recordatorio]:
+        # Permisos: Dueno/Colaborador pueden actualizar; Lector no
+        if Rol == RolParticipante.Lector:
+            return None
         Entidad = SesionBD.get(Recordatorio, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return None
@@ -155,7 +175,10 @@ class RecordatoriosService:
         SesionBD.refresh(Entidad)
         return Entidad
 
-    def EliminarRecordatorio(self, SesionBD: Session, Id: int) -> bool:
+    def EliminarRecordatorio(self, SesionBD: Session, Id: int, Rol: RolParticipante = RolParticipante.Dueno) -> bool:
+        # Permisos: por defecto solo Dueno puede eliminar
+        if Rol != RolParticipante.Dueno:
+            return False
         Entidad = SesionBD.get(Recordatorio, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return False

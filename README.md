@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.6
+MyPlanU v0.7
 =================
 
 Descripcion
@@ -107,6 +107,13 @@ v0.6
   - No crear Recordatorio en el pasado.
   - Al borrar Evento (soft), marcar Recordatorios relacionados como EliminadoEn.
 - Rutas REST en español: /eventos, /recordatorios (GET/POST/PATCH/DELETE), y /salud se mantiene igual.
+
+v0.7
+- Servicios y permisos base:
+  - Enum RolParticipante: ['Dueno','Colaborador','Lector'].
+  - Permisos: Dueno = CRUD total; Colaborador = crear/leer/actualizar; Lector = solo lectura.
+  - Bloquear eliminar si rol != Dueno.
+  - Reglas vigentes: Inicio < Fin; Recordatorio no en pasado; existencia de Meta/Propietario/Evento.
 
 TODOs siguientes (planeados)
 ----------------------------

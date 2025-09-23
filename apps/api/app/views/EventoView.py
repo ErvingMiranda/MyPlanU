@@ -6,6 +6,7 @@ from sqlmodel import Session
 
 from app.core.Database import ObtenerSesion, IniciarTablas
 from app.services.EventosService import EventosService, RecordatoriosService
+from app.core.Permisos import RolParticipante
 
 
 Router = APIRouter()
@@ -33,6 +34,7 @@ def CrearEvento(
     Fin: datetime,
     Descripcion: Optional[str] = None,
     Ubicacion: Optional[str] = None,
+    Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
     Entidad = Eventos.CrearEvento(
@@ -44,6 +46,7 @@ def CrearEvento(
         Fin=Fin,
         Descripcion=Descripcion,
         Ubicacion=Ubicacion,
+        Rol=Rol,
     )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Datos invalidos (Meta/Propietario inexistentes o Inicio >= Fin)")
@@ -66,10 +69,11 @@ def ActualizarEvento(
     Inicio: Optional[datetime] = None,
     Fin: Optional[datetime] = None,
     Ubicacion: Optional[str] = None,
+    Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
     Entidad = Eventos.ActualizarEvento(
-        SesionBD, Id, Titulo=Titulo, Descripcion=Descripcion, Inicio=Inicio, Fin=Fin, Ubicacion=Ubicacion
+        SesionBD, Id, Titulo=Titulo, Descripcion=Descripcion, Inicio=Inicio, Fin=Fin, Ubicacion=Ubicacion, Rol=Rol
     )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Evento no encontrado o valido (Inicio < Fin)")
@@ -77,10 +81,10 @@ def ActualizarEvento(
 
 
 @Router.delete("/eventos/{Id}")
-def EliminarEvento(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
-    Exito = Eventos.EliminarEvento(SesionBD, Id)
+def EliminarEvento(Id: int, Rol: RolParticipante = RolParticipante.Dueno, SesionBD: Session = Depends(ObtenerSesion)):
+    Exito = Eventos.EliminarEvento(SesionBD, Id, Rol=Rol)
     if not Exito:
-        raise HTTPException(status_code=404, detail="Evento no encontrado")
+        raise HTTPException(status_code=403, detail="No permitido o evento no encontrado")
     return {"ok": True}
 
 
@@ -95,9 +99,10 @@ def CrearRecordatorio(
     EventoId: int,
     FechaHora: datetime,
     Canal: str,
+    Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    Entidad = Recordatorios.CrearRecordatorio(SesionBD, EventoId=EventoId, FechaHora=FechaHora, Canal=Canal)
+    Entidad = Recordatorios.CrearRecordatorio(SesionBD, EventoId=EventoId, FechaHora=FechaHora, Canal=Canal, Rol=Rol)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Datos invalidos (evento inexistente o FechaHora en pasado)")
     return Entidad
@@ -117,17 +122,18 @@ def ActualizarRecordatorio(
     FechaHora: Optional[datetime] = None,
     Canal: Optional[str] = None,
     Enviado: Optional[bool] = None,
+    Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    Entidad = Recordatorios.ActualizarRecordatorio(SesionBD, Id, FechaHora=FechaHora, Canal=Canal, Enviado=Enviado)
+    Entidad = Recordatorios.ActualizarRecordatorio(SesionBD, Id, FechaHora=FechaHora, Canal=Canal, Enviado=Enviado, Rol=Rol)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Recordatorio no encontrado o invalido (FechaHora en pasado)")
     return Entidad
 
 
 @Router.delete("/recordatorios/{Id}")
-def EliminarRecordatorio(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
-    Exito = Recordatorios.EliminarRecordatorio(SesionBD, Id)
+def EliminarRecordatorio(Id: int, Rol: RolParticipante = RolParticipante.Dueno, SesionBD: Session = Depends(ObtenerSesion)):
+    Exito = Recordatorios.EliminarRecordatorio(SesionBD, Id, Rol=Rol)
     if not Exito:
-        raise HTTPException(status_code=404, detail="Recordatorio no encontrado")
+        raise HTTPException(status_code=403, detail="No permitido o recordatorio no encontrado")
     return {"ok": True}
