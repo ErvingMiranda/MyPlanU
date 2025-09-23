@@ -32,7 +32,7 @@ export default function DetalleMetaScreen(): JSX.Element {
       {meta.EliminadoEn ? (
         <Button title="Recuperar" onPress={async () => { await RecuperarMeta(meta.Id); navigation.goBack(); }} />
       ) : (
-        <Button title="Editar" onPress={() => navigation.navigate('CrearEditarMeta')} />
+        <Button title="Editar" onPress={() => navigation.navigate('CrearEditarMeta', { meta })} />
       )}
     </View>
   );

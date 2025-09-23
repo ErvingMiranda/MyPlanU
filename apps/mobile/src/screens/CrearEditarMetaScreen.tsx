@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert } from 'react-native';
-import { createGoal } from '../services/goals';
-import { useNavigation } from '@react-navigation/native';
+import { createGoal, updateGoal } from '../services/goals';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
+
+type Parametros = { CrearEditarMeta: { meta?: { Id: number; Titulo: string; TipoMeta: string; Descripcion?: string | null } } };
 
 export default function CrearEditarMetaScreen(): JSX.Element {
   const navigation = useNavigation<any>();
+  const ruta = useRoute<RouteProp<Parametros, 'CrearEditarMeta'>>();
+  const meta = ruta.params?.meta;
+  const cliente = useQueryClient();
   const [Titulo, EstablecerTitulo] = useState('');
   const [TipoMeta, EstablecerTipoMeta] = useState('SALUD');
   const [Descripcion, EstablecerDescripcion] = useState('');
   const [Guardando, SetGuardando] = useState(false);
+
+  React.useEffect(() => {
+    if (meta) {
+      EstablecerTitulo(meta.Titulo ?? '');
+      EstablecerTipoMeta(meta.TipoMeta ?? '');
+      EstablecerDescripcion(meta.Descripcion ?? '');
+    }
+  }, [meta]);
 
   return (
     <View style={Estilos.Contenedor}>
@@ -20,12 +34,27 @@ export default function CrearEditarMetaScreen(): JSX.Element {
       <Text>Descripcion</Text>
       <TextInput style={[Estilos.Input, { height: 80 }]} value={Descripcion} onChangeText={EstablecerDescripcion} multiline />
       <View style={Estilos.Acciones}>
-        <Button title={Guardando ? 'Guardando…' : 'Guardar'} disabled={Guardando} onPress={async () => {
+        <Button title={Guardando ? 'Guardando…' : meta ? 'Actualizar' : 'Guardar'} disabled={Guardando} onPress={async () => {
           try {
             if (!Titulo.trim()) { Alert.alert('Validación', 'El título es requerido'); return; }
             SetGuardando(true);
-            await createGoal({ Titulo, TipoMeta, Descripcion, PropietarioId: 1 });
-            Alert.alert('Éxito', 'Meta guardada');
+            if (meta) {
+              const prev = { ...meta };
+              try {
+                await updateGoal(meta.Id, { Titulo, TipoMeta, Descripcion });
+                Alert.alert('Éxito', 'Meta actualizada');
+              } catch (e: any) {
+                // rollback UI state
+                EstablecerTitulo(prev.Titulo ?? '');
+                EstablecerTipoMeta(prev.TipoMeta ?? '');
+                EstablecerDescripcion(prev.Descripcion ?? '');
+                throw e;
+              }
+            } else {
+              await createGoal({ Titulo, TipoMeta, Descripcion, PropietarioId: 1 });
+              Alert.alert('Éxito', 'Meta guardada');
+            }
+            await cliente.invalidateQueries({ queryKey: ['metas'] });
             navigation.goBack();
           } catch (e: any) {
             Alert.alert('Error', e?.message ?? 'No se pudo guardar la meta');
