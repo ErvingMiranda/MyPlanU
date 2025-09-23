@@ -10,11 +10,11 @@ class UsuariosService:
     # TODO(roles): validar permisos por rol (Dueno, Colaborador, Lector)
     # TODO(cascada): definir comportamiento de cascada logica hacia Eventos y Recordatorios
 
-    def Crear(self, SesionBD: Session, Correo: str, Nombre: str) -> Optional[Usuario]:
+    def Crear(self, SesionBD: Session, Correo: str, Nombre: str, ZonaHoraria: str = 'UTC') -> Optional[Usuario]:
         # Validar existencia por correo para evitar duplicados
         if self.Existe(SesionBD, Correo=Correo):
             return None
-        Entidad = Usuario(Correo=Correo, Nombre=Nombre)
+        Entidad = Usuario(Correo=Correo, Nombre=Nombre, ZonaHoraria=ZonaHoraria)
         SesionBD.add(Entidad)
         SesionBD.commit()
         SesionBD.refresh(Entidad)
@@ -27,7 +27,14 @@ class UsuariosService:
     def Obtener(self, SesionBD: Session, Id: int) -> Optional[Usuario]:
         return SesionBD.get(Usuario, Id)
 
-    def Actualizar(self, SesionBD: Session, Id: int, Correo: Optional[str] = None, Nombre: Optional[str] = None) -> Optional[Usuario]:
+    def Actualizar(
+        self,
+        SesionBD: Session,
+        Id: int,
+        Correo: Optional[str] = None,
+        Nombre: Optional[str] = None,
+        ZonaHoraria: Optional[str] = None,
+    ) -> Optional[Usuario]:
         Entidad = SesionBD.get(Usuario, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return None
@@ -35,6 +42,8 @@ class UsuariosService:
             Entidad.Correo = Correo
         if Nombre is not None:
             Entidad.Nombre = Nombre
+        if ZonaHoraria is not None:
+            Entidad.ZonaHoraria = ZonaHoraria
         SesionBD.add(Entidad)
         SesionBD.commit()
         SesionBD.refresh(Entidad)

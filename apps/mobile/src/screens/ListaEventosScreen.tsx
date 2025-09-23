@@ -2,12 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Button } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Evento, ObtenerEventos } from '../api/ClienteApi';
+import { ObtenerZonaHoraria } from '../userPrefs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, any>;
 
 export default function ListaEventosScreen({ navigation }: Props): JSX.Element {
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['eventos'], queryFn: ObtenerEventos });
+  const zona = ObtenerZonaHoraria();
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['eventos', zona], queryFn: () => ObtenerEventos(1) });
 
   return (
     <View style={Estilos.Contenedor}>

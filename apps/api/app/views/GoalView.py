@@ -41,8 +41,14 @@ def ObtenerUsuario(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
 
 
 @Router.patch("/usuarios/{Id}")
-def ActualizarUsuario(Id: int, Correo: Optional[str] = None, Nombre: Optional[str] = None, SesionBD: Session = Depends(ObtenerSesion)):
-    Entidad = Usuarios.Actualizar(SesionBD, Id, Correo=Correo, Nombre=Nombre)
+def ActualizarUsuario(
+    Id: int,
+    Correo: Optional[str] = None,
+    Nombre: Optional[str] = None,
+    ZonaHoraria: Optional[str] = None,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
+    Entidad = Usuarios.Actualizar(SesionBD, Id, Correo=Correo, Nombre=Nombre, ZonaHoraria=ZonaHoraria)
     if Entidad is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return Entidad

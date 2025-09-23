@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.11
+MyPlanU v0.12
 =================
 
 Descripcion
@@ -156,6 +156,20 @@ v0.11
 - Criterios rapidos:
   - Crear Evento semanal con DiasSemana=['Lun','Mie'] y consultar /eventos/proximos devuelve ocurrencias en esos dias dentro del rango.
   - Recordatorio con repeticion calcula proximas fechas dentro del rango futuro.
+
+v0.12
+- Backend (zonas horarias por usuario):
+  - Usuario ahora tiene campo ZonaHoraria (IANA, ej. "America/Mexico_City"), por defecto 'UTC'.
+  - Los endpoints de eventos y recordatorios aceptan parametros opcionales para manejar zonas horarias:
+    - ZonaHorariaEntrada: al crear/editar (o al consultar rangos) si las fechas son "naive", se interpretan en esta zona y se almacenan en UTC.
+    - UsuarioId y/o ZonaHoraria: para respuestas, las fechas se devuelven en ISO8601 con offset convertido a la zona del usuario (si no se provee, se usa UTC).
+  - Endpoints actualizados: GET/POST/PATCH /eventos, GET /eventos/{Id}, GET /eventos/proximos, GET/POST/PATCH /recordatorios, GET /recordatorios/{Id}, GET /recordatorios/proximos.
+- Movil:
+  - Nueva preferencia local de zona horaria (detecta la del dispositivo por defecto) y pantalla Configuracion permite establecerla y persistirla en el backend (PATCH /usuarios/{Id}).
+  - Cliente API envia automaticamente ZonaHoraria/ZonaHorariaEntrada y UsuarioId al consultar/crear/editar, y muestra fechas ya ajustadas por el backend.
+- Criterios rapidos:
+  - Al cambiar la zona horaria en Configuracion y refrescar Lista/Detalle de eventos, las horas se muestran con el offset correcto de la zona.
+  - Los recordatorios proximos muestran su FechaHora con el offset de la zona del usuario y el contador "tiempo restante" coincide.
 
 TODOs siguientes (planeados)
 ----------------------------

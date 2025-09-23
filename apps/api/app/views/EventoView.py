@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,12 +8,20 @@ from app.core.Database import ObtenerSesion, IniciarTablas
 from app.services.EventosService import EventosService, RecordatoriosService
 from app.services.ParticipantesService import ParticipantesService
 from app.core.Permisos import RolParticipante
+from app.services.UsuariosService import UsuariosService
+
+try:
+    # Python 3.9+
+    from zoneinfo import ZoneInfo
+except Exception:  # pragma: no cover
+    ZoneInfo = None  # type: ignore
 
 
 Router = APIRouter()
 Eventos = EventosService()
 Recordatorios = RecordatoriosService()
 Participantes = ParticipantesService()
+Usuarios = UsuariosService()
 
 
 @Router.on_event("startup")
@@ -21,21 +29,98 @@ def AlIniciar():
     IniciarTablas()
 
 
+# Utilidades de zona horaria
+def _obtener_tz(SesionBD: Session, UsuarioId: Optional[int], ZonaHoraria: Optional[str]):
+    """Resuelve la zona horaria: prioridad ZonaHoraria explicita, luego la del Usuario, si no UTC."""
+    zona = ZonaHoraria
+    if zona is None and UsuarioId is not None:
+        u = Usuarios.Obtener(SesionBD, UsuarioId)
+        if u is not None and u.ZonaHoraria:
+            zona = u.ZonaHoraria
+    try:
+        if zona and ZoneInfo:
+            return ZoneInfo(zona)
+    except Exception:
+        pass
+    # Por defecto UTC
+    return timezone.utc
+
+
+def _a_utc_naive(dt: Optional[datetime], ZonaEntrada: Optional[str] = None) -> Optional[datetime]:
+    """Convierte un datetime a UTC naive. Si dt es naive y se provee ZonaEntrada, lo interpreta en esa zona."""
+    if dt is None:
+        return None
+    # Si viene con tzinfo, convertir a UTC
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    # Si es naive y se indico ZonaEntrada, interpretarlo en esa zona
+    if ZonaEntrada and ZoneInfo:
+        try:
+            loc = dt.replace(tzinfo=ZoneInfo(ZonaEntrada))
+            return loc.astimezone(timezone.utc).replace(tzinfo=None)
+        except Exception:
+            pass
+    # Caso contrario, asumir que ya es UTC naive
+    return dt
+
+
+def _a_zona_iso(dt: Optional[datetime], tz) -> Optional[str]:
+    """Toma un datetime UTC naive y devuelve ISO8601 con offset en tz."""
+    if dt is None:
+        return None
+    # Asumimos almacenado en UTC naive
+    aware = dt.replace(tzinfo=timezone.utc)
+    return aware.astimezone(tz).isoformat()
+
+
 # Eventos
 @Router.get("/eventos")
-def ListarEventos(SesionBD: Session = Depends(ObtenerSesion)):
-    return Eventos.ListarEventos(SesionBD)
+def ListarEventos(
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    res = Eventos.ListarEventos(SesionBD)
+    # Convertir campos de tiempo a la zona objetivo
+    salida = []
+    for ev in res:
+        obj = ev.dict()
+        obj["Inicio"] = _a_zona_iso(ev.Inicio, tz)
+        obj["Fin"] = _a_zona_iso(ev.Fin, tz)
+        obj["CreadoEn"] = _a_zona_iso(ev.CreadoEn, tz)
+        obj["ActualizadoEn"] = _a_zona_iso(ev.ActualizadoEn, tz) if ev.ActualizadoEn else None
+        obj["EliminadoEn"] = _a_zona_iso(ev.EliminadoEn, tz) if ev.EliminadoEn else None
+        salida.append(obj)
+    return salida
 
 
 @Router.get("/eventos/proximos")
 def ListarEventosProximos(
     Desde: datetime,
     Hasta: datetime,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
+    ZonaHorariaEntrada: Optional[str] = None,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    if Hasta <= Desde:
+    # Normalizar rango a UTC naive
+    desde_utc = _a_utc_naive(Desde, ZonaHorariaEntrada)
+    hasta_utc = _a_utc_naive(Hasta, ZonaHorariaEntrada)
+    if hasta_utc <= desde_utc:
         raise HTTPException(status_code=400, detail="Rango invalido")
-    return Eventos.ProyectarOcurrencias(SesionBD, Desde=Desde, Hasta=Hasta)
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    ocurrencias = Eventos.ProyectarOcurrencias(SesionBD, Desde=desde_utc, Hasta=hasta_utc)
+    # Convertir ocurrencias a zona
+    salida = []
+    for o in ocurrencias:
+        salida.append({
+            'Titulo': o['Titulo'],
+            'EventoId': o['EventoId'],
+            'Inicio': _a_zona_iso(o['Inicio'], tz),
+            'Fin': _a_zona_iso(o['Fin'], tz),
+        })
+    return salida
 
 
 @Router.post("/eventos")
@@ -47,31 +132,57 @@ def CrearEvento(
     Fin: datetime,
     Descripcion: Optional[str] = None,
     Ubicacion: Optional[str] = None,
+    ZonaHorariaEntrada: Optional[str] = None,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
+    # Normalizar a UTC naive
+    ini_utc = _a_utc_naive(Inicio, ZonaHorariaEntrada)
+    fin_utc = _a_utc_naive(Fin, ZonaHorariaEntrada)
     Entidad = Eventos.CrearEvento(
         SesionBD,
         MetaId=MetaId,
         PropietarioId=PropietarioId,
         Titulo=Titulo,
-        Inicio=Inicio,
-        Fin=Fin,
+        Inicio=ini_utc,
+        Fin=fin_utc,
         Descripcion=Descripcion,
         Ubicacion=Ubicacion,
         Rol=Rol,
     )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Datos invalidos (Meta/Propietario inexistentes o Inicio >= Fin)")
-    return Entidad
+    # Responder en zona del usuario si aplica
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    obj = Entidad.dict()
+    obj["Inicio"] = _a_zona_iso(Entidad.Inicio, tz)
+    obj["Fin"] = _a_zona_iso(Entidad.Fin, tz)
+    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
+    obj["ActualizadoEn"] = _a_zona_iso(Entidad.ActualizadoEn, tz) if Entidad.ActualizadoEn else None
+    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
+    return obj
 
 
 @Router.get("/eventos/{Id}")
-def ObtenerEvento(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
+def ObtenerEvento(
+    Id: int,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
     Entidad = Eventos.Obtener(SesionBD, Id)
     if Entidad is None or Entidad.EliminadoEn is not None:
         raise HTTPException(status_code=404, detail="Evento no encontrado")
-    return Entidad
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    obj = Entidad.dict()
+    obj["Inicio"] = _a_zona_iso(Entidad.Inicio, tz)
+    obj["Fin"] = _a_zona_iso(Entidad.Fin, tz)
+    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
+    obj["ActualizadoEn"] = _a_zona_iso(Entidad.ActualizadoEn, tz) if Entidad.ActualizadoEn else None
+    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
+    return obj
 
 
 @Router.patch("/eventos/{Id}")
@@ -82,15 +193,27 @@ def ActualizarEvento(
     Inicio: Optional[datetime] = None,
     Fin: Optional[datetime] = None,
     Ubicacion: Optional[str] = None,
+    ZonaHorariaEntrada: Optional[str] = None,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
+    ini_utc = _a_utc_naive(Inicio, ZonaHorariaEntrada) if Inicio is not None else None
+    fin_utc = _a_utc_naive(Fin, ZonaHorariaEntrada) if Fin is not None else None
     Entidad = Eventos.ActualizarEvento(
-        SesionBD, Id, Titulo=Titulo, Descripcion=Descripcion, Inicio=Inicio, Fin=Fin, Ubicacion=Ubicacion, Rol=Rol
+        SesionBD, Id, Titulo=Titulo, Descripcion=Descripcion, Inicio=ini_utc, Fin=fin_utc, Ubicacion=Ubicacion, Rol=Rol
     )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Evento no encontrado o valido (Inicio < Fin)")
-    return Entidad
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    obj = Entidad.dict()
+    obj["Inicio"] = _a_zona_iso(Entidad.Inicio, tz)
+    obj["Fin"] = _a_zona_iso(Entidad.Fin, tz)
+    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
+    obj["ActualizadoEn"] = _a_zona_iso(Entidad.ActualizadoEn, tz) if Entidad.ActualizadoEn else None
+    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
+    return obj
 
 
 @Router.delete("/eventos/{Id}")
@@ -103,8 +226,21 @@ def EliminarEvento(Id: int, Rol: RolParticipante = RolParticipante.Dueno, Sesion
 
 # Recordatorios
 @Router.get("/recordatorios")
-def ListarRecordatorios(SesionBD: Session = Depends(ObtenerSesion)):
-    return Recordatorios.ListarRecordatorios(SesionBD)
+def ListarRecordatorios(
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    res = Recordatorios.ListarRecordatorios(SesionBD)
+    salida = []
+    for r in res:
+        obj = r.dict()
+        obj["FechaHora"] = _a_zona_iso(r.FechaHora, tz)
+        obj["CreadoEn"] = _a_zona_iso(r.CreadoEn, tz)
+        obj["EliminadoEn"] = _a_zona_iso(r.EliminadoEn, tz) if r.EliminadoEn else None
+        salida.append(obj)
+    return salida
 
 
 @Router.post("/recordatorios")
@@ -116,13 +252,17 @@ def CrearRecordatorio(
     FrecuenciaRepeticion: Optional[str] = None,
     IntervaloRepeticion: Optional[int] = None,
     DiasSemana: Optional[str] = None,
+    ZonaHorariaEntrada: Optional[str] = None,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
+    fh_utc = _a_utc_naive(FechaHora, ZonaHorariaEntrada)
     Entidad = Recordatorios.CrearRecordatorio(
         SesionBD,
         EventoId=EventoId,
-        FechaHora=FechaHora,
+        FechaHora=fh_utc,
         Canal=Canal,
         Mensaje=Mensaje,
         FrecuenciaRepeticion=FrecuenciaRepeticion,
@@ -132,15 +272,30 @@ def CrearRecordatorio(
     )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Datos invalidos (evento inexistente o FechaHora en pasado)")
-    return Entidad
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    obj = Entidad.dict()
+    obj["FechaHora"] = _a_zona_iso(Entidad.FechaHora, tz)
+    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
+    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
+    return obj
 
 
 @Router.get("/recordatorios/{Id}")
-def ObtenerRecordatorio(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
+def ObtenerRecordatorio(
+    Id: int,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
     Entidad = Recordatorios.Obtener(SesionBD, Id)
     if Entidad is None or Entidad.EliminadoEn is not None:
         raise HTTPException(status_code=404, detail="Recordatorio no encontrado")
-    return Entidad
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    obj = Entidad.dict()
+    obj["FechaHora"] = _a_zona_iso(Entidad.FechaHora, tz)
+    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
+    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
+    return obj
 
 
 @Router.patch("/recordatorios/{Id}")
@@ -153,13 +308,17 @@ def ActualizarRecordatorio(
     FrecuenciaRepeticion: Optional[str] = None,
     IntervaloRepeticion: Optional[int] = None,
     DiasSemana: Optional[str] = None,
+    ZonaHorariaEntrada: Optional[str] = None,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
+    fh_utc = _a_utc_naive(FechaHora, ZonaHorariaEntrada) if FechaHora is not None else None
     Entidad = Recordatorios.ActualizarRecordatorio(
         SesionBD,
         Id,
-        FechaHora=FechaHora,
+        FechaHora=fh_utc,
         Canal=Canal,
         Enviado=Enviado,
         Mensaje=Mensaje,
@@ -170,7 +329,12 @@ def ActualizarRecordatorio(
     )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="Recordatorio no encontrado o invalido (FechaHora en pasado)")
-    return Entidad
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    obj = Entidad.dict()
+    obj["FechaHora"] = _a_zona_iso(Entidad.FechaHora, tz)
+    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
+    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
+    return obj
 
 
 @Router.delete("/recordatorios/{Id}")
@@ -182,10 +346,24 @@ def EliminarRecordatorio(Id: int, Rol: RolParticipante = RolParticipante.Dueno, 
 
 
 @Router.get("/recordatorios/proximos")
-def ListarRecordatoriosProximos(dias: int = 7, SesionBD: Session = Depends(ObtenerSesion)):
+def ListarRecordatoriosProximos(
+    dias: int = 7,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
     if dias <= 0:
         dias = 7
-    return Recordatorios.ListarProximos(SesionBD, dias=dias)
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    res = Recordatorios.ListarProximos(SesionBD, dias=dias)
+    salida = []
+    for r in res:
+        obj = r.dict()
+        obj["FechaHora"] = _a_zona_iso(r.FechaHora, tz)
+        obj["CreadoEn"] = _a_zona_iso(r.CreadoEn, tz)
+        obj["EliminadoEn"] = _a_zona_iso(r.EliminadoEn, tz) if r.EliminadoEn else None
+        salida.append(obj)
+    return salida
 
 
 # Participantes de Evento

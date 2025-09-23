@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, Button, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Evento, CrearEvento, ActualizarEvento } from '../api/ClienteApi';
+import { ObtenerZonaHoraria } from '../userPrefs';
 
 type Parametros = { CrearEditarEvento: { evento?: Evento } };
 
@@ -39,6 +40,8 @@ export default function CrearEditarEventoScreen(): JSX.Element {
           Inicio: Inicio || undefined,
           Fin: Fin || undefined,
           Ubicacion: Ubicacion,
+          ZonaHorariaEntrada: ObtenerZonaHoraria(),
+          UsuarioId: EventoInicial.PropietarioId,
         });
         Alert.alert('Actualizado', `Evento ${actualizado.Id}`);
         navigation.goBack();
@@ -58,6 +61,8 @@ export default function CrearEditarEventoScreen(): JSX.Element {
           Inicio,
           Fin,
           Ubicacion: Ubicacion || undefined,
+          ZonaHorariaEntrada: ObtenerZonaHoraria(),
+          UsuarioId: propietarioId,
         } as any);
         Alert.alert('Creado', `Evento ${creado.Id}`);
         navigation.goBack();

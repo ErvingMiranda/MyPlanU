@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CrearRecordatorio, ObtenerRecordatoriosProximos, Recordatorio } from '../api/ClienteApi';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ObtenerZonaHoraria } from '../userPrefs';
 
 function FormatearTiempoRestante(iso: string): string {
   const ahora = new Date();
@@ -20,11 +21,9 @@ function FormatearTiempoRestante(iso: string): string {
 export default function NotificacionesScreen(): JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const clienteQuery = useQueryClient();
-
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['recordatorios-proximos'],
-    queryFn: () => ObtenerRecordatoriosProximos(7)
-  });
+  const dias = 7;
+  const zona = ObtenerZonaHoraria();
+  const { data, isLoading, isError } = useQuery({ queryKey: ['proximos', dias, zona], queryFn: () => ObtenerRecordatoriosProximos(dias, 1) });
 
   const [EventoId, EstablecerEventoId] = useState('');
   const [FechaHora, EstablecerFechaHora] = useState('');
@@ -34,10 +33,10 @@ export default function NotificacionesScreen(): JSX.Element {
     mutationFn: async () => {
       const eventoId = parseInt(EventoId, 10);
       if (!eventoId || !FechaHora) throw new Error('EventoId y FechaHora son obligatorios');
-      return CrearRecordatorio({ EventoId: eventoId, FechaHora, Canal: 'Local', Mensaje });
+      return CrearRecordatorio({ EventoId: eventoId, FechaHora, Canal: 'Local', Mensaje, UsuarioId: 1 });
     },
     onSuccess: () => {
-      clienteQuery.invalidateQueries({ queryKey: ['recordatorios-proximos'] });
+      clienteQuery.invalidateQueries({ queryKey: ['proximos'] });
       EstablecerEventoId('');
       EstablecerFechaHora('');
       EstablecerMensaje('');
