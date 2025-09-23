@@ -9,7 +9,8 @@ Motor = create_engine(URLBaseDatos, echo=False, connect_args={"check_same_thread
 
 def IniciarTablas() -> None:
     # Importar modelos para registrar metadata antes de crear tablas
-    from app.models import Goal  # noqa: F401
+    from app.models import Goal  # noqa: F401  # Usuario, Meta
+    from app.models.Evento import Evento, Recordatorio  # noqa: F401
     SQLModel.metadata.create_all(Motor)
 
 
