@@ -12,8 +12,10 @@ export default function PrincipalScreen({ navigation }: Props): JSX.Element {
   return (
     <View style={Estilos.Contenedor}>
       <View style={Estilos.BarraAcciones}>
-        <Button title="Crear Meta" onPress={() => navigation.navigate('CrearEditarMeta')} />
-        <Button title="Refrescar" onPress={() => refetch()} />
+        <Button title="+" onPress={() => navigation.navigate('CrearEditarMeta')} />
+        <Button title="Notificaciones" onPress={() => navigation.navigate('Notificaciones')} />
+        <Button title="Configuracion" onPress={() => navigation.navigate('Configuracion')} />
+        <Button title="CerrarSesion" onPress={() => navigation.replace('LoginRegistro')} />
       </View>
       {isLoading && <ActivityIndicator />} 
       {isError && <Text>Ocurrió un error al cargar las metas.</Text>}

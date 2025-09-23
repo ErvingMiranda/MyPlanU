@@ -1,10 +1,10 @@
 # MyPlanU
-MyPlanU v0.4
+MyPlanU v0.5
 =================
 
 Descripcion
 -----------
-MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Esta version (v0.4) agrega la base de la app movil con navegacion y consumo de la API de metas, manteniendo las convenciones en español y PascalCase.
+MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Esta version (v0.5) conecta los flujos de navegacion en la app movil segun el diagrama propuesto.
 
 Estructura del Monorepo
 -----------------------
@@ -62,15 +62,20 @@ npm run start
 
 Cambios de esta version
 -----------------------
-- App movil base (Expo + TypeScript):
-	- Navegacion: Stack (LoginRegistro → Principal) y Tabs (Principal, Notificaciones, Configuracion).
-	- Pantallas: LoginRegistroScreen, PrincipalScreen (lista metas desde API), DetalleMetaScreen, CrearEditarMetaScreen (formulario basico sin persistencia), NotificacionesScreen, ConfiguracionScreen.
-	- Cliente API en `apps/mobile/src/api/ClienteApi.ts` y configuracion de URL en `apps/mobile/src/config.ts` (usa `process.env.EXPO_PUBLIC_API_URL` o `http://127.0.0.1:8000`).
-	- React Query configurado en el root para consultas (lista de metas).
+App movil (flujos v0.5):
+	- LoginRegistroScreen → (replace) → PrincipalScreen.
+	- PrincipalScreen → DetalleMetaScreen (al tocar una meta).
+	- PrincipalScreen → CrearEditarMetaScreen (boton "+").
+	- PrincipalScreen → NotificacionesScreen y → ConfiguracionScreen (botones).
+	- NotificacionesScreen → DetalleMetaScreen (mock) o volver a PrincipalScreen.
+	- DetalleMetaScreen → CrearEditarMetaScreen (boton "Editar").
+	- ConfiguracionScreen → volver a PrincipalScreen con "Guardar" o "Cancelar".
+	- PrincipalScreen → LoginRegistroScreen (boton "CerrarSesion").
 
-Backend (continuidad de v0.3):
-	- Services en español y PascalCase.
-	- Rutas: GET /salud; CRUD /usuarios; CRUD /metas.
+Base tecnica:
+	- Navegacion: Stack + Tabs.
+	- React Query en el root.
+	- Cliente API `src/api/ClienteApi.ts` y configuracion `src/config.ts`.
 
 TODOs siguientes (planeados):
 - Permisos por rol: Dueno, Colaborador, Lector (validacion en Services).

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, Button, Alert } from 'react-native';
+import { View, Text, StyleSheet, Switch, Button } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export default function ConfiguracionScreen(): JSX.Element {
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [TemaOscuro, EstablecerTemaOscuro] = useState(false);
   const [Notificar, EstablecerNotificar] = useState(false);
 
@@ -17,8 +20,8 @@ export default function ConfiguracionScreen(): JSX.Element {
         <Switch value={Notificar} onValueChange={EstablecerNotificar} />
       </View>
       <View style={Estilos.Acciones}>
-        <Button title="Guardar" onPress={() => Alert.alert('Guardado', 'Se guardaran en futuro release.')} />
-        <Button title="Cancelar" onPress={() => Alert.alert('Cancelado')} />
+        <Button title="Guardar" onPress={() => navigation.navigate('Principal')} />
+        <Button title="Cancelar" onPress={() => navigation.navigate('Principal')} />
       </View>
     </View>
   );
