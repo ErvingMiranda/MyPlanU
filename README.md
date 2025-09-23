@@ -1,10 +1,10 @@
 # MyPlanU
-MyPlanU v0.2
+MyPlanU v0.3
 =================
 
 Descripcion
 -----------
-MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Esta version (v0.2) extiende el backend con modelos y CRUD en español (soft delete) y mantiene el frontend movil base.
+MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Esta version (v0.3) refactoriza la capa Services en el backend, mantiene CRUD en español con soft delete y deja TODOs claros para la siguiente iteracion.
 
 Estructura del Monorepo
 -----------------------
@@ -59,8 +59,13 @@ npm run start
 
 Cambios de esta version
 -----------------------
-- Backend actualizado a CRUD en español con SQLModel (soft delete):
-	- Modelos: Usuario(Id, Correo, Nombre, CreadoEn, EliminadoEn), Meta(Id, PropietarioId, Titulo, Descripcion, TipoMeta, CreadoEn, ActualizadoEn, EliminadoEn)
-	- Reglas: PropietarioId debe existir al crear Meta; listados excluyen EliminadoEn != None; PATCH actualiza ActualizadoEn
-	- Rutas: GET /salud → {"estado":"ok"}; CRUD /usuarios; CRUD /metas
+- Refactor Services (espaniol + PascalCase):
+	- UsuariosService.py: Crear, Listar, Obtener, Actualizar, Eliminar, BuscarPorCorreo, Existe
+	- MetasService.py: CrearMeta, ListarMetas, Obtener, ActualizarMeta, EliminarMeta
+- Reglas: Validar PropietarioId y bloquear operaciones si EliminadoEn no es nulo; listados excluyen EliminadoEn != None; PATCH actualiza ActualizadoEn.
+- Rutas: GET /salud → {"estado":"ok"}; CRUD /usuarios; CRUD /metas.
 - Frontend movil base (Expo + TS) sin cambios funcionales.
+
+TODOs siguientes (planeados):
+- Permisos por rol: Dueno, Colaborador, Lector (validacion en Services).
+- Cascada logica: al eliminar Meta, propagar a Eventos y Recordatorios.

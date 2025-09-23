@@ -4,12 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from app.core.Database import ObtenerSesion, IniciarTablas
-from app.services.GoalService import UsuarioServicio, MetaServicio
+from app.services.UsuariosService import UsuariosService
+from app.services.MetasService import MetasService
 
 
 Router = APIRouter()
-Usuarios = UsuarioServicio()
-Metas = MetaServicio()
+Usuarios = UsuariosService()
+Metas = MetasService()
 
 
 @Router.on_event("startup")
@@ -25,7 +26,10 @@ def ListarUsuarios(SesionBD: Session = Depends(ObtenerSesion)):
 
 @Router.post("/usuarios")
 def CrearUsuario(Correo: str, Nombre: str, SesionBD: Session = Depends(ObtenerSesion)):
-    return Usuarios.Crear(SesionBD, Correo=Correo, Nombre=Nombre)
+    Entidad = Usuarios.Crear(SesionBD, Correo=Correo, Nombre=Nombre)
+    if Entidad is None:
+        raise HTTPException(status_code=409, detail="Correo ya existe")
+    return Entidad
 
 
 @Router.get("/usuarios/{Id}")
@@ -55,12 +59,12 @@ def EliminarUsuario(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
 # Metas
 @Router.get("/metas")
 def ListarMetas(SesionBD: Session = Depends(ObtenerSesion)):
-    return Metas.Listar(SesionBD)
+    return Metas.ListarMetas(SesionBD)
 
 
 @Router.post("/metas")
 def CrearMeta(PropietarioId: int, Titulo: str, TipoMeta: str, Descripcion: Optional[str] = None, SesionBD: Session = Depends(ObtenerSesion)):
-    Entidad = Metas.Crear(SesionBD, PropietarioId=PropietarioId, Titulo=Titulo, TipoMeta=TipoMeta, Descripcion=Descripcion)
+    Entidad = Metas.CrearMeta(SesionBD, PropietarioId=PropietarioId, Titulo=Titulo, TipoMeta=TipoMeta, Descripcion=Descripcion)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="PropietarioId invalido")
     return Entidad
@@ -76,7 +80,7 @@ def ObtenerMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
 
 @Router.patch("/metas/{Id}")
 def ActualizarMeta(Id: int, Titulo: Optional[str] = None, Descripcion: Optional[str] = None, TipoMeta: Optional[str] = None, SesionBD: Session = Depends(ObtenerSesion)):
-    Entidad = Metas.Actualizar(SesionBD, Id, Titulo=Titulo, Descripcion=Descripcion, TipoMeta=TipoMeta)
+    Entidad = Metas.ActualizarMeta(SesionBD, Id, Titulo=Titulo, Descripcion=Descripcion, TipoMeta=TipoMeta)
     if Entidad is None:
         raise HTTPException(status_code=404, detail="Meta no encontrada")
     return Entidad
@@ -84,7 +88,7 @@ def ActualizarMeta(Id: int, Titulo: Optional[str] = None, Descripcion: Optional[
 
 @Router.delete("/metas/{Id}")
 def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
-    Exito = Metas.Eliminar(SesionBD, Id)
+    Exito = Metas.EliminarMeta(SesionBD, Id)
     if not Exito:
         raise HTTPException(status_code=404, detail="Meta no encontrada")
     return {"ok": True}
