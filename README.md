@@ -221,6 +221,20 @@ v0.13.7
   - Reemplazo de Alerts por toasts en pantallas de Configuración y Crear/Editar Meta para feedback no intrusivo.
   - Nuevos helpers `showSuccess/showError/showInfo` y provider global `<Toast />` integrados.
 
+Pruebas (app móvil)
+-------------------
+- Stack: Jest + jest-expo.
+- Ejecutar pruebas en `apps/mobile`:
+
+```bash
+cd apps/mobile
+npm test
+```
+
+- Cobertura básica incluida:
+  - Servicios de metas (Axios) con escenarios de éxito, 404 y timeout (axios-mock-adapter).
+  - Cliente fetch de recordatorios/metas con mocks de fetch manuales (éxito y 409).
+
 TODOs siguientes (planeados)
 ----------------------------
 - Permisos por rol: Dueno, Colaborador, Lector (validacion en Services).

@@ -9,11 +9,7 @@
     "noEmit": true,
     "allowJs": false,
     "resolveJsonModule": true,
-    "types": [
-      "react",
-      "react-native",
-      "node"
-    ]
+    "types": ["react", "react-native", "node", "jest"]
   },
   "include": [
     "**/*.ts",
