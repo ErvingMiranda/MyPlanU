@@ -31,3 +31,11 @@ class Recordatorio(SQLModel, table=True):
     EliminadoEn: Optional[datetime] = None
 
     EventoRef: Optional[Evento] = Relationship(back_populates="Recordatorios")
+
+
+class ParticipanteEvento(SQLModel, table=True):
+    Id: Optional[int] = Field(default=None, primary_key=True)
+    EventoId: int = Field(foreign_key="evento.Id")
+    UsuarioId: int = Field(foreign_key="usuario.Id")
+    Rol: str = Field(regex="^(Dueno|Colaborador|Lector)$")
+    CreadoEn: datetime = Field(default_factory=datetime.utcnow)

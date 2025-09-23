@@ -25,6 +25,13 @@ export default function DetalleEventoScreen(): JSX.Element {
       {evento.Descripcion ? <Text style={Estilos.Campo}>Descripcion: {evento.Descripcion}</Text> : null}
       {evento.Ubicacion ? <Text style={Estilos.Campo}>Ubicacion: {evento.Ubicacion}</Text> : null}
       <View style={{ height: 12 }} />
+      <Text style={Estilos.Subtitulo}>Participantes</Text>
+      {/* TODO: Reemplazar mock por datos reales desde API /eventos/{id}/participantes */}
+      <View style={Estilos.ParticipanteItem}><Text>Dueno: usuario@ejemplo.com</Text></View>
+      <View style={Estilos.ParticipanteItem}><Text>Colaborador: colab@equipo.com</Text></View>
+      <View style={{ height: 8 }} />
+      <Button title="AgregarParticipante" onPress={() => {/* placeholder */}} />
+      <View style={{ height: 12 }} />
       <Button title="Editar" onPress={() => navigation.navigate('CrearEditarEvento', { evento })} />
     </View>
   );
@@ -33,5 +40,7 @@ export default function DetalleEventoScreen(): JSX.Element {
 const Estilos = StyleSheet.create({
   Contenedor: { flex: 1, padding: 16 },
   Titulo: { fontSize: 20, fontWeight: '700', marginBottom: 12 },
-  Campo: { fontSize: 16, marginBottom: 6 }
+  Campo: { fontSize: 16, marginBottom: 6 },
+  Subtitulo: { fontSize: 16, fontWeight: '600', marginBottom: 6 },
+  ParticipanteItem: { padding: 8, borderRadius: 8, backgroundColor: '#f2f2f2', marginBottom: 6 }
 });

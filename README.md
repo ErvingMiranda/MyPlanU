@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.9
+MyPlanU v0.10
 =================
 
 Descripcion
@@ -133,6 +133,20 @@ v0.9
   - NotificacionesScreen ahora lista recordatorios proximos desde la API y muestra un contador de "tiempo restante" (min/horas).
   - Formulario rapido para crear un Recordatorio (EventoId, FechaHora en ISO, Mensaje opcional) y refrescar la lista.
 - Nota TODO: Integrar Expo Notifications (notificaciones locales) en la siguiente version.
+
+v0.10
+- Backend:
+  - Nuevo modelo ParticipanteEvento(Id, EventoId -> Evento, UsuarioId -> Usuario, Rol in ['Dueno','Colaborador','Lector'], CreadoEn).
+  - Reglas: un Evento debe tener exactamente un Dueno; Colaborador/Lector opcionales. Si Meta es 'Colectiva', TODO validar al cerrar que exista al menos un Colaborador.
+  - Servicio ParticipantesService: AgregarParticipante, CambiarRol, QuitarParticipante (no permite quitar Dueno si no hay transferencia).
+  - Rutas:
+    - GET /eventos/{Id}/participantes
+    - POST /eventos/{Id}/participantes (agrega participante con rol)
+    - PATCH /participantes/{Id} (cambiar rol)
+    - DELETE /participantes/{Id}
+  - EventosService: al eliminar evento, se dejo TODO para notificar a participantes.
+- Movil:
+  - DetalleEventoScreen muestra seccion de Participantes (mock temporal) y boton "AgregarParticipante" (placeholder sin logica).
 
 TODOs siguientes (planeados)
 ----------------------------

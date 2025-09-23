@@ -110,6 +110,7 @@ class EventosService:
         for Rec in SesionBD.exec(Consulta):
             Rec.EliminadoEn = datetime.utcnow()
             SesionBD.add(Rec)
+        # TODO: Notificar a participantes del evento sobre la eliminacion (integrar mecanismo de notificaciones)
         SesionBD.commit()
         return True
 

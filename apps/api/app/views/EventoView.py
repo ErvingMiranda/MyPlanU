@@ -6,12 +6,14 @@ from sqlmodel import Session
 
 from app.core.Database import ObtenerSesion, IniciarTablas
 from app.services.EventosService import EventosService, RecordatoriosService
+from app.services.ParticipantesService import ParticipantesService
 from app.core.Permisos import RolParticipante
 
 
 Router = APIRouter()
 Eventos = EventosService()
 Recordatorios = RecordatoriosService()
+Participantes = ParticipantesService()
 
 
 @Router.on_event("startup")
@@ -161,3 +163,33 @@ def ListarRecordatoriosProximos(dias: int = 7, SesionBD: Session = Depends(Obten
     if dias <= 0:
         dias = 7
     return Recordatorios.ListarProximos(SesionBD, dias=dias)
+
+
+# Participantes de Evento
+@Router.get("/eventos/{EventoId}/participantes")
+def ListarParticipantes(EventoId: int, SesionBD: Session = Depends(ObtenerSesion)):
+    return Participantes.ListarPorEvento(SesionBD, EventoId)
+
+
+@Router.post("/eventos/{EventoId}/participantes")
+def AgregarParticipante(EventoId: int, UsuarioId: int, Rol: RolParticipante, SesionBD: Session = Depends(ObtenerSesion)):
+    Entidad = Participantes.AgregarParticipante(SesionBD, EventoId=EventoId, UsuarioId=UsuarioId, Rol=Rol)
+    if Entidad is None:
+        raise HTTPException(status_code=400, detail="No se pudo agregar participante (valida Dueno unico/evento/usuario)")
+    return Entidad
+
+
+@Router.patch("/participantes/{Id}")
+def CambiarRolParticipante(Id: int, Rol: RolParticipante, SesionBD: Session = Depends(ObtenerSesion)):
+    Entidad = Participantes.CambiarRol(SesionBD, Id, Rol)
+    if Entidad is None:
+        raise HTTPException(status_code=400, detail="No se pudo cambiar rol (Dueno unico o participante inexistente)")
+    return Entidad
+
+
+@Router.delete("/participantes/{Id}")
+def QuitarParticipante(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
+    Exito = Participantes.QuitarParticipante(SesionBD, Id)
+    if not Exito:
+        raise HTTPException(status_code=400, detail="No se pudo quitar (no se puede eliminar Dueno sin transferencia)")
+    return {"ok": True}
