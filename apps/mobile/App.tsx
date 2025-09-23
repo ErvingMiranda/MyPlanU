@@ -13,6 +13,7 @@ import ConfiguracionScreen from './src/screens/ConfiguracionScreen';
 import ListaEventosScreen from './src/screens/ListaEventosScreen';
 import DetalleEventoScreen from './src/screens/DetalleEventoScreen';
 import CrearEditarEventoScreen from './src/screens/CrearEditarEventoScreen';
+import PapeleraScreen from './src/screens/PapeleraScreen';
 
 const Cliente = new QueryClient();
 
@@ -25,6 +26,7 @@ function TabsPrincipales(): JSX.Element {
       <Tabs.Screen name="Principal" component={PrincipalScreen} />
       <Tabs.Screen name="Notificaciones" component={NotificacionesScreen} />
       <Tabs.Screen name="Configuracion" component={ConfiguracionScreen} />
+      <Tabs.Screen name="Papelera" component={PapeleraScreen} />
     </Tabs.Navigator>
   );
 }

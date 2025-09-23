@@ -28,6 +28,22 @@ class MetasService:
         Consulta = select(Meta).where(Meta.EliminadoEn.is_(None))
         return list(SesionBD.exec(Consulta))
 
+    def ListarMetasEliminadas(
+        self,
+        SesionBD: Session,
+        PropietarioId: Optional[int] = None,
+        Desde: Optional[datetime] = None,
+        Hasta: Optional[datetime] = None,
+    ) -> List[Meta]:
+        Consulta = select(Meta).where(Meta.EliminadoEn.is_not(None))
+        if PropietarioId is not None:
+            Consulta = Consulta.where(Meta.PropietarioId == PropietarioId)
+        if Desde is not None:
+            Consulta = Consulta.where(Meta.EliminadoEn >= Desde)
+        if Hasta is not None:
+            Consulta = Consulta.where(Meta.EliminadoEn <= Hasta)
+        return list(SesionBD.exec(Consulta))
+
     def Obtener(self, SesionBD: Session, Id: int) -> Optional[Meta]:
         return SesionBD.get(Meta, Id)
 

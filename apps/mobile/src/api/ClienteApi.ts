@@ -135,7 +135,14 @@ export async function ActualizarUsuario(Id: number, cambios: Partial<Pick<Usuari
 // Recuperaciones (undo)
 export async function RecuperarMeta(Id: number): Promise<Meta> {
   const r = await fetch(`${ApiUrl}/metas/${Id}/recuperar`, { method: 'POST' });
-  if (!r.ok) throw new Error('No se pudo recuperar meta');
+  if (!r.ok) {
+    try {
+      const err = await r.json();
+      throw new Error(err?.detail || 'No se pudo recuperar meta');
+    } catch {
+      throw new Error('No se pudo recuperar meta');
+    }
+  }
   return r.json();
 }
 
@@ -146,7 +153,14 @@ export async function RecuperarEvento(Id: number, UsuarioId?: number): Promise<E
   if (zona) params.append('ZonaHoraria', zona);
   const q = params.toString();
   const r = await fetch(`${ApiUrl}/eventos/${Id}/recuperar${q ? `?${q}` : ''}`, { method: 'POST' });
-  if (!r.ok) throw new Error('No se pudo recuperar evento');
+  if (!r.ok) {
+    try {
+      const err = await r.json();
+      throw new Error(err?.detail || 'No se pudo recuperar evento');
+    } catch {
+      throw new Error('No se pudo recuperar evento');
+    }
+  }
   return r.json();
 }
 
@@ -157,6 +171,54 @@ export async function RecuperarRecordatorio(Id: number, UsuarioId?: number): Pro
   if (zona) params.append('ZonaHoraria', zona);
   const q = params.toString();
   const r = await fetch(`${ApiUrl}/recordatorios/${Id}/recuperar${q ? `?${q}` : ''}`, { method: 'POST' });
-  if (!r.ok) throw new Error('No se pudo recuperar recordatorio');
+  if (!r.ok) {
+    try {
+      const err = await r.json();
+      throw new Error(err?.detail || 'No se pudo recuperar recordatorio');
+    } catch {
+      throw new Error('No se pudo recuperar recordatorio');
+    }
+  }
+  return r.json();
+}
+
+// Papelera (eliminados)
+export async function ObtenerMetasEliminadas(params?: { PropietarioId?: number; Desde?: string; Hasta?: string; UsuarioId?: number }): Promise<Meta[]> {
+  const q = new URLSearchParams();
+  const zona = ObtenerZonaHoraria();
+  if (params?.PropietarioId) q.append('PropietarioId', String(params.PropietarioId));
+  if (params?.Desde) q.append('Desde', params.Desde);
+  if (params?.Hasta) q.append('Hasta', params.Hasta);
+  if (params?.UsuarioId) q.append('UsuarioId', String(params.UsuarioId));
+  if (zona) q.append('ZonaHoraria', zona);
+  const r = await fetch(`${ApiUrl}/papelera/metas?${q.toString()}`);
+  if (!r.ok) throw new Error('Error al cargar metas eliminadas');
+  return r.json();
+}
+
+export async function ObtenerEventosEliminados(params?: { PropietarioId?: number; MetaId?: number; Desde?: string; Hasta?: string; UsuarioId?: number }): Promise<Evento[]> {
+  const q = new URLSearchParams();
+  const zona = ObtenerZonaHoraria();
+  if (params?.PropietarioId) q.append('PropietarioId', String(params.PropietarioId));
+  if (params?.MetaId) q.append('MetaId', String(params.MetaId));
+  if (params?.Desde) q.append('Desde', params.Desde);
+  if (params?.Hasta) q.append('Hasta', params.Hasta);
+  if (params?.UsuarioId) q.append('UsuarioId', String(params.UsuarioId));
+  if (zona) q.append('ZonaHoraria', zona);
+  const r = await fetch(`${ApiUrl}/papelera/eventos?${q.toString()}`);
+  if (!r.ok) throw new Error('Error al cargar eventos eliminados');
+  return r.json();
+}
+
+export async function ObtenerRecordatoriosEliminados(params?: { EventoId?: number; Desde?: string; Hasta?: string; UsuarioId?: number }): Promise<Recordatorio[]> {
+  const q = new URLSearchParams();
+  const zona = ObtenerZonaHoraria();
+  if (params?.EventoId) q.append('EventoId', String(params.EventoId));
+  if (params?.Desde) q.append('Desde', params.Desde);
+  if (params?.Hasta) q.append('Hasta', params.Hasta);
+  if (params?.UsuarioId) q.append('UsuarioId', String(params.UsuarioId));
+  if (zona) q.append('ZonaHoraria', zona);
+  const r = await fetch(`${ApiUrl}/papelera/recordatorios?${q.toString()}`);
+  if (!r.ok) throw new Error('Error al cargar recordatorios eliminados');
   return r.json();
 }

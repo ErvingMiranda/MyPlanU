@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.13
+MyPlanU v0.13.1
 =================
 
 Descripcion
@@ -184,6 +184,24 @@ v0.13
 - Criterios rapidos:
   - Eliminar una Meta y sus Eventos (soft), luego recuperar primero la Meta y despues los Eventos.
   - Intentar recuperar Evento con Meta eliminada debe fallar con mensaje claro.
+
+v0.13.1
+- Backend (papelera de eliminados):
+  - Nuevas rutas de solo lectura para listar elementos con soft delete:
+    - GET /papelera/metas?PropietarioId=&Desde=&Hasta=&UsuarioId=&ZonaHoraria=&ZonaHorariaEntrada=
+    - GET /papelera/eventos?PropietarioId=&MetaId=&Desde=&Hasta=&UsuarioId=&ZonaHoraria=&ZonaHorariaEntrada=
+    - GET /papelera/recordatorios?EventoId=&Desde=&Hasta=&UsuarioId=&ZonaHoraria=&ZonaHorariaEntrada=
+  - Todas regresan fechas en ISO8601 ajustadas a la zona indicada (o la del UsuarioId) igual que el resto de endpoints.
+- Movil:
+  - Nueva pantalla "Papelera" con pestañas Metas/Eventos/Recordatorios. Permite ver EliminadoEn y recuperar cada item.
+  - Manejo de errores al recuperar (muestra mensaje del backend cuando aplica, ej. dependencias no recuperadas).
+- Ejemplos rapidos (cURL):
+  - Metas eliminadas en la ultima semana, vistas en zona de Mexico City:
+    curl "http://localhost:8000/papelera/metas?Desde=$(date -Iseconds -u --date='-7 days')&ZonaHoraria=America/Mexico_City"
+  - Eventos eliminados de una meta especifica:
+    curl "http://localhost:8000/papelera/eventos?MetaId=123"
+  - Recordatorios eliminados de un evento, interpretando el filtro de fecha de entrada en zona local:
+    curl "http://localhost:8000/papelera/recordatorios?EventoId=45&Desde=2025-01-01T00:00:00&ZonaHorariaEntrada=America/Bogota&ZonaHoraria=America/Bogota"
 
 TODOs siguientes (planeados)
 ----------------------------

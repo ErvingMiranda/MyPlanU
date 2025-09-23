@@ -56,6 +56,25 @@ class EventosService:
         Consulta = select(Evento).where(Evento.EliminadoEn.is_(None))
         return list(SesionBD.exec(Consulta))
 
+    def ListarEventosEliminados(
+        self,
+        SesionBD: Session,
+        PropietarioId: Optional[int] = None,
+        MetaId: Optional[int] = None,
+        Desde: Optional[datetime] = None,
+        Hasta: Optional[datetime] = None,
+    ) -> List[Evento]:
+        Consulta = select(Evento).where(Evento.EliminadoEn.is_not(None))
+        if PropietarioId is not None:
+            Consulta = Consulta.where(Evento.PropietarioId == PropietarioId)
+        if MetaId is not None:
+            Consulta = Consulta.where(Evento.MetaId == MetaId)
+        if Desde is not None:
+            Consulta = Consulta.where(Evento.EliminadoEn >= Desde)
+        if Hasta is not None:
+            Consulta = Consulta.where(Evento.EliminadoEn <= Hasta)
+        return list(SesionBD.exec(Consulta))
+
     def _ParseDiasSemana(self, dias_csv: Optional[str]) -> List[int]:
         mapa = {
             'Lun': 0,
@@ -274,6 +293,22 @@ class RecordatoriosService:
 
     def ListarRecordatorios(self, SesionBD: Session) -> List[Recordatorio]:
         Consulta = select(Recordatorio).where(Recordatorio.EliminadoEn.is_(None))
+        return list(SesionBD.exec(Consulta))
+
+    def ListarRecordatoriosEliminados(
+        self,
+        SesionBD: Session,
+        EventoId: Optional[int] = None,
+        Desde: Optional[datetime] = None,
+        Hasta: Optional[datetime] = None,
+    ) -> List[Recordatorio]:
+        Consulta = select(Recordatorio).where(Recordatorio.EliminadoEn.is_not(None))
+        if EventoId is not None:
+            Consulta = Consulta.where(Recordatorio.EventoId == EventoId)
+        if Desde is not None:
+            Consulta = Consulta.where(Recordatorio.EliminadoEn >= Desde)
+        if Hasta is not None:
+            Consulta = Consulta.where(Recordatorio.EliminadoEn <= Hasta)
         return list(SesionBD.exec(Consulta))
 
     def Obtener(self, SesionBD: Session, Id: int) -> Optional[Recordatorio]:
