@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert } from 'react-native';
+import { showError, showSuccess } from '../ui/toast';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Evento, CrearEvento, ActualizarEvento } from '../api/ClienteApi';
@@ -7,7 +8,7 @@ import { ObtenerZonaHoraria } from '../userPrefs';
 
 type Parametros = { CrearEditarEvento: { evento?: Evento } };
 
-export default function CrearEditarEventoScreen(): JSX.Element {
+export default function CrearEditarEventoScreen(): React.ReactElement {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const ruta = useRoute<RouteProp<Parametros, 'CrearEditarEvento'>>();
   const EventoInicial = ruta.params?.evento;
@@ -43,7 +44,7 @@ export default function CrearEditarEventoScreen(): JSX.Element {
           ZonaHorariaEntrada: ObtenerZonaHoraria(),
           UsuarioId: EventoInicial.PropietarioId,
         });
-        Alert.alert('Actualizado', `Evento ${actualizado.Id}`);
+  showSuccess(`Evento ${actualizado.Id} actualizado`);
         navigation.goBack();
       } else {
         // Para crear se requieren MetaId y PropietarioId
@@ -64,12 +65,10 @@ export default function CrearEditarEventoScreen(): JSX.Element {
           ZonaHorariaEntrada: ObtenerZonaHoraria(),
           UsuarioId: propietarioId,
         } as any);
-        Alert.alert('Creado', `Evento ${creado.Id}`);
+  showSuccess(`Evento ${creado.Id} creado`);
         navigation.goBack();
       }
-    } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Fallo en API');
-    }
+    } catch (e: any) { showError(e?.message ?? 'Fallo en API'); }
   };
 
   return (

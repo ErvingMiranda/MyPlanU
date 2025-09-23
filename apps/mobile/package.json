@@ -24,7 +24,8 @@
     "react-native-gesture-handler": "~2.28.0",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "react-native-toast-message": "^2.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",

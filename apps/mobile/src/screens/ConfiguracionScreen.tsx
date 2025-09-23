@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Switch, Button, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, Switch, Button, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActualizarUsuario } from '../api/ClienteApi';
 import { EstablecerZonaHoraria, ObtenerZonaHoraria } from '../userPrefs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { http, ping } from '../api/http';
+import { showError, showSuccess, showInfo } from '../ui/toast';
 
-export default function ConfiguracionScreen(): JSX.Element {
+export default function ConfiguracionScreen(): React.ReactElement {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [TemaOscuro, EstablecerTemaOscuro] = useState(false);
   const [Notificar, EstablecerNotificar] = useState(false);
@@ -49,10 +50,10 @@ export default function ConfiguracionScreen(): JSX.Element {
             SetPingEstado('loading');
             const res = await ping();
             SetPingEstado(res.ok ? 'ok' : 'fail');
-            Alert.alert(res.ok ? 'Conectado' : 'Sin conexión', `Base URL: ${res.url}`);
+            if (res.ok) showInfo(`Conectado: ${res.url}`); else showError(`Sin conexión: ${res.url}`);
           } catch {
             SetPingEstado('fail');
-            Alert.alert('Sin conexión', 'Revisa la URL o tu red.');
+            showError('Sin conexión. Revisa la URL o tu red.');
           }
         }} />
         <Text style={{ marginLeft: 12 }}>{PingEstado === 'ok' ? '✅ OK' : PingEstado === 'fail' ? '❌ ERROR' : ''}</Text>
@@ -67,10 +68,10 @@ export default function ConfiguracionScreen(): JSX.Element {
               await AsyncStorage.setItem('APP_API_BASE_URL', ApiBaseUrl);
               http.defaults.baseURL = ApiBaseUrl;
             }
-            Alert.alert('Listo', 'Preferencias guardadas');
+            showSuccess('Preferencias guardadas');
             navigation.navigate('HomeTabs');
           } catch (e: any) {
-            Alert.alert('Error', e?.message ?? 'No se pudo guardar');
+            showError(e?.message ?? 'No se pudo guardar');
           }
         }} />
   <Button title="Cancelar" onPress={() => navigation.navigate('HomeTabs')} />

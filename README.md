@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.13.6
+MyPlanU v0.13.7
 =================
 
 Descripcion
@@ -214,6 +214,12 @@ v0.13.6
 - Pantalla Configuracion con conectividad:
   - Nuevo botón “Probar conexión” que llama ping() y muestra estado.
   - Campo editable de API_BASE_URL (solo dev) que se persiste en almacenamiento y actualiza baseURL de Axios en caliente.
+
+v0.13.7
+- Manejo de errores unificado y toasts:
+  - Cliente Axios ahora instala interceptores (solo log en dev) y se centraliza el mapeo de errores en `src/api/errors.ts`.
+  - Reemplazo de Alerts por toasts en pantallas de Configuración y Crear/Editar Meta para feedback no intrusivo.
+  - Nuevos helpers `showSuccess/showError/showInfo` y provider global `<Toast />` integrados.
 
 TODOs siguientes (planeados)
 ----------------------------

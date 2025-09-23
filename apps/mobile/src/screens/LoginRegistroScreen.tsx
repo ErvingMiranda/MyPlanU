@@ -4,7 +4,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, any>;
 
-export default function LoginRegistroScreen({ navigation }: Props): JSX.Element {
+export default function LoginRegistroScreen({ navigation }: Props): React.ReactElement {
   return (
     <View style={Estilos.Contenedor}>
       <Text style={Estilos.Titulo}>Bienvenido a MyPlanU</Text>

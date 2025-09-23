@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
+import { showSuccess, showError } from '../ui/toast';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Evento, RecuperarEvento } from '../api/ClienteApi';
 
 type Parametros = { DetalleEvento: { evento: Evento } };
 
-export default function DetalleEventoScreen(): JSX.Element {
+export default function DetalleEventoScreen(): React.ReactElement {
   const ruta = useRoute<RouteProp<Parametros, 'DetalleEvento'>>();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const evento = ruta.params?.evento;
@@ -28,7 +29,7 @@ export default function DetalleEventoScreen(): JSX.Element {
       {evento.EliminadoEn ? <Text style={[Estilos.Campo, { color: 'red' }]}>EliminadoEn: {evento.EliminadoEn}</Text> : null}
       <View style={{ height: 8 }} />
       {evento.EliminadoEn ? (
-        <Button title="Recuperar" onPress={async () => { await RecuperarEvento(evento.Id, evento.PropietarioId); navigation.goBack(); }} />
+        <Button title="Recuperar" onPress={async () => { try { await RecuperarEvento(evento.Id, evento.PropietarioId); showSuccess('Evento recuperado'); navigation.goBack(); } catch (e: any) { showError(e?.message ?? 'No se pudo recuperar'); } }} />
       ) : (
         <>
           <Text style={Estilos.Subtitulo}>Participantes</Text>

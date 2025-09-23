@@ -7,7 +7,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, any>;
 
-export default function PrincipalScreen({ navigation }: Props): JSX.Element {
+export default function PrincipalScreen({ navigation }: Props): React.ReactElement {
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['metas'], queryFn: ObtenerMetas });
 
   return (

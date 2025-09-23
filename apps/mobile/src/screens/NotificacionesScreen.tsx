@@ -18,7 +18,7 @@ function FormatearTiempoRestante(iso: string): string {
   return remMin > 0 ? `${horas} h ${remMin} min` : `${horas} h`;
 }
 
-export default function NotificacionesScreen(): JSX.Element {
+export default function NotificacionesScreen(): React.ReactElement {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const clienteQuery = useQueryClient();
   const dias = 7;

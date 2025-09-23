@@ -1,4 +1,5 @@
-import { http, getNetworkErrorMessage } from '../api/http';
+import { http } from '../api/http';
+import { mapHttpError, type HttpError } from '../api/errors';
 
 export type Goal = {
   Id: number;
@@ -20,22 +21,7 @@ export type CreateGoal = {
 
 export type UpdateGoal = Partial<Pick<CreateGoal, 'Titulo' | 'TipoMeta' | 'Descripcion'>>;
 
-export type HttpError = {
-  code: number | 'NETWORK' | 'TIMEOUT';
-  message: string;
-  hint?: string;
-};
-
-function normalizeError(e: any): HttpError {
-  const isAxios = !!e?.isAxiosError || !!e?.response || !!e?.request;
-  if (!isAxios) return { code: 'NETWORK', message: String(e?.message || e) };
-  const status: number | undefined = e?.response?.status;
-  if (e?.code === 'ECONNABORTED') return { code: 'TIMEOUT', message: 'La solicitud excedió el tiempo de espera.', hint: 'Verifica tu conexión o intenta de nuevo.' };
-  if (status === 404) return { code: 404, message: e?.response?.data?.detail || 'Recurso no encontrado.' };
-  if (status === 409) return { code: 409, message: e?.response?.data?.detail || 'Conflicto de datos.' };
-  if (!status) return { code: 'NETWORK', message: getNetworkErrorMessage(e), hint: 'Revisa API_BASE_URL o tu conexión.' };
-  return { code: status, message: e?.response?.data?.detail || e?.message || 'Error de servidor' };
-}
+function normalizeError(e: any): HttpError { return mapHttpError(e); }
 
 function toQuery(params: Record<string, any>) {
   const q = new URLSearchParams();

@@ -4,6 +4,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toast } from './src/ui/toast';
+import { http } from './src/api/http';
+import { installAxiosInterceptors } from './src/api/errors';
 import LoginRegistroScreen from './src/screens/LoginRegistroScreen';
 import PrincipalScreen from './src/screens/PrincipalScreen';
 import DetalleMetaScreen from './src/screens/DetalleMetaScreen';
@@ -20,7 +23,7 @@ const Cliente = new QueryClient();
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
 
-function TabsPrincipales(): JSX.Element {
+function TabsPrincipales(): React.ReactElement {
   return (
     <Tabs.Navigator>
       <Tabs.Screen name="Principal" component={PrincipalScreen} />
@@ -31,7 +34,11 @@ function TabsPrincipales(): JSX.Element {
   );
 }
 
-export default function AplicacionMovil(): JSX.Element {
+export default function AplicacionMovil(): React.ReactElement {
+  // install interceptors once
+  React.useEffect(() => {
+    installAxiosInterceptors(http);
+  }, []);
   return (
     <QueryClientProvider client={Cliente}>
       <NavigationContainer>
@@ -45,6 +52,7 @@ export default function AplicacionMovil(): JSX.Element {
           <Stack.Screen name="CrearEditarEvento" component={CrearEditarEventoScreen} options={{ title: 'Crear/Editar Evento' }} />
         </Stack.Navigator>
       </NavigationContainer>
+      <Toast />
     </QueryClientProvider>
   );
 }

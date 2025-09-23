@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Button } from 'react-native';
+import { showError, showSuccess } from '../ui/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ObtenerZonaHoraria } from '../userPrefs';
 import { RecuperarMeta, RecuperarEvento, RecuperarRecordatorio, ObtenerMetasEliminadas, ObtenerEventosEliminados, ObtenerRecordatoriosEliminados, Meta, Evento, Recordatorio } from '../api/ClienteApi';
@@ -9,7 +10,7 @@ function useFetch<T>(key: any[], fetcher: () => Promise<T[]>) {
   return useQuery<T[]>({ queryKey: [...key, zona], queryFn: fetcher });
 }
 
-export default function PapeleraScreen(): JSX.Element {
+export default function PapeleraScreen(): React.ReactElement {
   const cliente = useQueryClient();
   const [Tab, setTab] = useState<'Metas'|'Eventos'|'Recordatorios'>('Metas');
   const metas = useFetch<Meta>(['papelera','metas'], () => ObtenerMetasEliminadas());
@@ -33,7 +34,7 @@ export default function PapeleraScreen(): JSX.Element {
             <ItemContainer>
               <Text style={Estilos.ItemTitulo}>{m.Titulo}</Text>
               <Text>EliminadoEn: {m.EliminadoEn ? new Date(m.EliminadoEn).toLocaleString() : '-'}</Text>
-              <Button title="Recuperar" onPress={async () => { try { await RecuperarMeta(m.Id); cliente.invalidateQueries({ queryKey: ['papelera'] }); } catch (err: any) { alert(err?.message ?? 'No se pudo recuperar'); } }} />
+              <Button title="Recuperar" onPress={async () => { try { await RecuperarMeta(m.Id); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Meta recuperada'); } catch (err: any) { showError(err?.message ?? 'No se pudo recuperar'); } }} />
             </ItemContainer>
           )}
         />
@@ -53,8 +54,9 @@ export default function PapeleraScreen(): JSX.Element {
                 try {
                   await RecuperarEvento(e.Id, e.PropietarioId);
                   cliente.invalidateQueries({ queryKey: ['papelera'] });
+                  showSuccess('Evento recuperado');
                 } catch (err: any) {
-                  alert(err?.message ?? 'No se pudo recuperar');
+                  showError(err?.message ?? 'No se pudo recuperar');
                 }
               }} />
             </ItemContainer>
@@ -75,8 +77,9 @@ export default function PapeleraScreen(): JSX.Element {
                 try {
                   await RecuperarRecordatorio(r.Id);
                   cliente.invalidateQueries({ queryKey: ['papelera'] });
+                  showSuccess('Recordatorio recuperado');
                 } catch (err: any) {
-                  alert(err?.message ?? 'No se pudo recuperar');
+                  showError(err?.message ?? 'No se pudo recuperar');
                 }
               }} />
             </ItemContainer>
@@ -87,7 +90,7 @@ export default function PapeleraScreen(): JSX.Element {
   );
 }
 
-function Lista({ titulo, loading, error, data, renderItem }: { titulo: string; loading: boolean; error: boolean; data: any[]; renderItem: (x: any) => JSX.Element }) {
+function Lista({ titulo, loading, error, data, renderItem }: { titulo: string; loading: boolean; error: boolean; data: any[]; renderItem: (x: any) => React.ReactElement }) {
   return (
     <View style={{ flex: 1 }}>
       <Text style={Estilos.Titulo}>{titulo}</Text>

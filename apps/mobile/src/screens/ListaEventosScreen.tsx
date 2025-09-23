@@ -7,7 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, any>;
 
-export default function ListaEventosScreen({ navigation }: Props): JSX.Element {
+export default function ListaEventosScreen({ navigation }: Props): React.ReactElement {
   const zona = ObtenerZonaHoraria();
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['eventos', zona], queryFn: () => ObtenerEventos(1) });
 
