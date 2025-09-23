@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { http, ping } from '../api/http';
 import { showError, showSuccess, showInfo, showRetry } from '../ui/toast';
 import { logEvent } from '../telemetry';
+import { processPending } from '../offline';
 
 export default function ConfiguracionScreen(): React.ReactElement {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -17,6 +18,7 @@ export default function ConfiguracionScreen(): React.ReactElement {
   const [ZonaHoraria, EstablecerZona] = useState<string>(ObtenerZonaHoraria() ?? 'UTC');
   const [ApiBaseUrl, SetApiBaseUrl] = useState<string>(http.defaults.baseURL || '');
   const [PingEstado, SetPingEstado] = useState<'idle'|'ok'|'fail'|'loading'>('idle');
+  const [Syncing, SetSyncing] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,6 +36,59 @@ export default function ConfiguracionScreen(): React.ReactElement {
       <View style={Estilos.Fila}>
         <Text>Tema Oscuro</Text>
         <Switch value={TemaOscuro} onValueChange={EstablecerTemaOscuro} />
+      </View>
+      <View style={{ marginBottom: 12 }}>
+        <Button title={Syncing ? 'Sincronizando…' : 'Reintentar sync offline'} disabled={Syncing} onPress={async () => {
+          try {
+            SetSyncing(true);
+            const { ok, fail } = await processPending(http);
+            logEvent('offline_sync_attempt', { ok, fail });
+            if (ok === 0 && fail === 0) {
+              showInfo('Sin operaciones pendientes');
+            } else if (fail === 0) {
+              showSuccess(`Sincronizado ${ok}/${ok}`);
+            } else {
+              showRetry(`Sync parcial: ok ${ok}, fallas ${fail}`, () => {
+                // retry same action
+                (async () => {
+                  SetSyncing(true);
+                  try {
+                    const r = await processPending(http);
+                    logEvent('offline_sync_retry', { ok: r.ok, fail: r.fail });
+                    if (r.fail === 0) {
+                      showSuccess(`Sincronizado ${r.ok}/${r.ok}`);
+                    } else {
+                      showError(`Aún pendientes: ${r.fail}`);
+                    }
+                  } finally {
+                    SetSyncing(false);
+                  }
+                })();
+              });
+            }
+          } catch (e: any) {
+            logEvent('offline_sync_error', { message: e?.message });
+            showRetry('Error al sincronizar', () => {
+              // trigger again
+              (async () => {
+                SetSyncing(true);
+                try {
+                  const r = await processPending(http);
+                  logEvent('offline_sync_retry', { ok: r.ok, fail: r.fail });
+                  if (r.fail === 0) {
+                    showSuccess(`Sincronizado ${r.ok}/${r.ok}`);
+                  } else {
+                    showError(`Aún pendientes: ${r.fail}`);
+                  }
+                } finally {
+                  SetSyncing(false);
+                }
+              })();
+            });
+          } finally {
+            SetSyncing(false);
+          }
+        }} />
       </View>
       <View style={Estilos.Fila}>
         <Text>Notificaciones</Text>

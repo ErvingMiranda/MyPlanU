@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.13.7
+MyPlanU v0.14.0
 =================
 
 Descripcion
@@ -240,6 +240,13 @@ v0.13.9
   - Nuevo módulo `src/telemetry.ts` con `logEvent(name, data)` y buffer en memoria (200 eventos).
   - Activado solo en `__DEV__` o si `EXPO_PUBLIC_TELEMETRY=dev`.
   - Eventos instrumentados: `network_ping`, `prefs_save_*`, `goal_save_*`, `recover_*` (meta/evento/recordatorio).
+
+v0.14.0
+- Offline mínimo (metas):
+  - Cache local de la lista de metas y cola de operaciones (crear/actualizar) usando AsyncStorage.
+  - En red caída: la lista usa el cache y crear/editar operan de forma optimista y se encolan para sincronizar luego.
+  - Al iniciar la app se intenta procesar la cola automáticamente.
+  - Nuevo botón en Configuración: “Reintentar sync offline” para forzar la sincronización manual y ver resultado por toasts.
 
 TODOs siguientes (planeados)
 ----------------------------

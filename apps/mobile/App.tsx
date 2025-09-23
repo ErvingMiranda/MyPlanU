@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toast } from './src/ui/toast';
 import { http } from './src/api/http';
 import { installAxiosInterceptors } from './src/api/errors';
+import { processPending } from './src/offline';
 import LoginRegistroScreen from './src/screens/LoginRegistroScreen';
 import PrincipalScreen from './src/screens/PrincipalScreen';
 import DetalleMetaScreen from './src/screens/DetalleMetaScreen';
@@ -38,6 +39,8 @@ export default function AplicacionMovil(): React.ReactElement {
   // install interceptors once
   React.useEffect(() => {
     installAxiosInterceptors(http);
+    // try to process pending offline queue on startup
+    processPending(http).catch(() => {});
   }, []);
   return (
     <QueryClientProvider client={Cliente}>
