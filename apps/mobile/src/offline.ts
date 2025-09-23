@@ -80,3 +80,19 @@ export function toQuery(params: Record<string, any>) {
   Object.entries(params).forEach(([k, v]) => v !== undefined && v !== null && q.append(k, String(v)));
   return q.toString();
 }
+
+// Test helpers: clear offline state between tests
+export async function __clearOfflineForTests(): Promise<void> {
+  try {
+    if (AsyncStorage) {
+      await AsyncStorage.removeItem(K_METAS);
+      await AsyncStorage.removeItem(K_QUEUE);
+    } else {
+      mem.delete(K_METAS);
+      mem.delete(K_QUEUE);
+    }
+  } catch {
+    mem.delete(K_METAS);
+    mem.delete(K_QUEUE);
+  }
+}

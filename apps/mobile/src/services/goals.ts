@@ -39,10 +39,10 @@ export async function listGoals(): Promise<Goal[]> {
     return metas;
   } catch (e) {
     const err = normalizeError(e);
-    // On network-only errors, return cached if available
+    // On network-only errors, return cached if available and non-empty
     if (err.code === 'NETWORK' || err.code === 'TIMEOUT') {
       const cached = await getCachedMetas();
-      if (cached) return cached as any;
+      if (cached && cached.length > 0) return cached as any;
     }
     throw err;
   }

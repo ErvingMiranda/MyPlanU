@@ -1,11 +1,15 @@
 import MockAdapter from 'axios-mock-adapter';
 import { http } from '../src/api/http';
 import { listGoals } from '../src/services/goals';
+import { __clearOfflineForTests } from '../src/offline';
 
 describe('goals service', () => {
   const mock = new MockAdapter(http);
 
-  afterEach(() => mock.reset());
+  afterEach(async () => {
+    mock.reset();
+    await __clearOfflineForTests();
+  });
 
   it('lists goals successfully', async () => {
     mock.onGet('/metas').reply(200, [{ Id: 1, PropietarioId: 1, Titulo: 'A', TipoMeta: 'OTRA' }]);
