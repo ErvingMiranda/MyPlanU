@@ -55,3 +55,18 @@ class MetasService:
         SesionBD.add(Entidad)
         SesionBD.commit()
         return True
+
+    def RecuperarMeta(self, SesionBD: Session, Id: int) -> Optional[Meta]:
+        Entidad = SesionBD.get(Meta, Id)
+        if not Entidad:
+            return None
+        if Entidad.EliminadoEn is None:
+            return Entidad  # ya activa
+        # Reglas: verificar propietario existe (no eliminamos usuarios en este proyecto)
+        # TODO(bitacora): registrar quien y cuando recupera
+        Entidad.EliminadoEn = None
+        Entidad.ActualizadoEn = datetime.utcnow()
+        SesionBD.add(Entidad)
+        SesionBD.commit()
+        SesionBD.refresh(Entidad)
+        return Entidad

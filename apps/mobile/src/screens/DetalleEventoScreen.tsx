@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Evento } from '../api/ClienteApi';
+import { Evento, RecuperarEvento } from '../api/ClienteApi';
 
 type Parametros = { DetalleEvento: { evento: Evento } };
 
@@ -25,7 +25,13 @@ export default function DetalleEventoScreen(): JSX.Element {
       {evento.Descripcion ? <Text style={Estilos.Campo}>Descripcion: {evento.Descripcion}</Text> : null}
       {evento.Ubicacion ? <Text style={Estilos.Campo}>Ubicacion: {evento.Ubicacion}</Text> : null}
       <View style={{ height: 12 }} />
-      <Text style={Estilos.Subtitulo}>Participantes</Text>
+      {evento.EliminadoEn ? <Text style={[Estilos.Campo, { color: 'red' }]}>EliminadoEn: {evento.EliminadoEn}</Text> : null}
+      <View style={{ height: 8 }} />
+      {evento.EliminadoEn ? (
+        <Button title="Recuperar" onPress={async () => { await RecuperarEvento(evento.Id, evento.PropietarioId); navigation.goBack(); }} />
+      ) : (
+        <>
+          <Text style={Estilos.Subtitulo}>Participantes</Text>
       {/* TODO: Reemplazar mock por datos reales desde API /eventos/{id}/participantes */}
       <View style={Estilos.ParticipanteItem}><Text>Dueno: usuario@ejemplo.com</Text></View>
       <View style={Estilos.ParticipanteItem}><Text>Colaborador: colab@equipo.com</Text></View>
@@ -33,6 +39,8 @@ export default function DetalleEventoScreen(): JSX.Element {
       <Button title="AgregarParticipante" onPress={() => {/* placeholder */}} />
       <View style={{ height: 12 }} />
       <Button title="Editar" onPress={() => navigation.navigate('CrearEditarEvento', { evento })} />
+        </>
+      )}
     </View>
   );
 }

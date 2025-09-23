@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.12
+MyPlanU v0.13
 =================
 
 Descripcion
@@ -170,6 +170,20 @@ v0.12
 - Criterios rapidos:
   - Al cambiar la zona horaria en Configuracion y refrescar Lista/Detalle de eventos, las horas se muestran con el offset correcto de la zona.
   - Los recordatorios proximos muestran su FechaHora con el offset de la zona del usuario y el contador "tiempo restante" coincide.
+
+v0.13
+- Soft delete con recuperacion (undo):
+  - Nuevos servicios y endpoints para recuperar Meta, Evento y Recordatorio:
+    - POST /metas/{Id}/recuperar
+    - POST /eventos/{Id}/recuperar
+    - POST /recordatorios/{Id}/recuperar
+  - Reglas: no se puede recuperar un hijo si su padre esta eliminado (primero recuperar la Meta, luego el Evento, luego el Recordatorio).
+  - Bitacora: TODO registrar quien recupera y cuando.
+- Movil:
+  - En DetalleMeta y DetalleEvento, si el recurso esta eliminado se muestra boton "Recuperar" (placeholder de flujo admin/lista de eliminados).
+- Criterios rapidos:
+  - Eliminar una Meta y sus Eventos (soft), luego recuperar primero la Meta y despues los Eventos.
+  - Intentar recuperar Evento con Meta eliminada debe fallar con mensaje claro.
 
 TODOs siguientes (planeados)
 ----------------------------

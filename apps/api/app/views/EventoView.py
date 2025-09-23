@@ -224,6 +224,26 @@ def EliminarEvento(Id: int, Rol: RolParticipante = RolParticipante.Dueno, Sesion
     return {"ok": True}
 
 
+@Router.post("/eventos/{Id}/recuperar")
+def RecuperarEvento(
+    Id: int,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
+    Entidad = Eventos.RecuperarEvento(SesionBD, Id)
+    if Entidad is None:
+        raise HTTPException(status_code=400, detail="No se puede recuperar (evento inexistente o Meta eliminada)")
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    obj = Entidad.dict()
+    obj["Inicio"] = _a_zona_iso(Entidad.Inicio, tz)
+    obj["Fin"] = _a_zona_iso(Entidad.Fin, tz)
+    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
+    obj["ActualizadoEn"] = _a_zona_iso(Entidad.ActualizadoEn, tz) if Entidad.ActualizadoEn else None
+    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
+    return obj
+
+
 # Recordatorios
 @Router.get("/recordatorios")
 def ListarRecordatorios(
@@ -343,6 +363,24 @@ def EliminarRecordatorio(Id: int, Rol: RolParticipante = RolParticipante.Dueno, 
     if not Exito:
         raise HTTPException(status_code=403, detail="No permitido o recordatorio no encontrado")
     return {"ok": True}
+
+
+@Router.post("/recordatorios/{Id}/recuperar")
+def RecuperarRecordatorio(
+    Id: int,
+    UsuarioId: Optional[int] = None,
+    ZonaHoraria: Optional[str] = None,
+    SesionBD: Session = Depends(ObtenerSesion),
+):
+    Entidad = Recordatorios.RecuperarRecordatorio(SesionBD, Id)
+    if Entidad is None:
+        raise HTTPException(status_code=400, detail="No se puede recuperar (recordatorio inexistente o Evento eliminado)")
+    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
+    obj = Entidad.dict()
+    obj["FechaHora"] = _a_zona_iso(Entidad.FechaHora, tz)
+    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
+    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
+    return obj
 
 
 @Router.get("/recordatorios/proximos")

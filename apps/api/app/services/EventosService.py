@@ -216,6 +216,24 @@ class EventosService:
         SesionBD.commit()
         return True
 
+    def RecuperarEvento(self, SesionBD: Session, Id: int) -> Optional[Evento]:
+        Entidad = SesionBD.get(Evento, Id)
+        if not Entidad:
+            return None
+        if Entidad.EliminadoEn is None:
+            return Entidad
+        # Validar que la Meta no este eliminada
+        MetaEntidad = SesionBD.get(Meta, Entidad.MetaId)
+        if not MetaEntidad or MetaEntidad.EliminadoEn is not None:
+            return None
+        # TODO(bitacora): registrar quien y cuando recupera
+        Entidad.EliminadoEn = None
+        Entidad.ActualizadoEn = datetime.utcnow()
+        SesionBD.add(Entidad)
+        SesionBD.commit()
+        SesionBD.refresh(Entidad)
+        return Entidad
+
 
 class RecordatoriosService:
     def CrearRecordatorio(
@@ -382,3 +400,20 @@ class RecordatoriosService:
         SesionBD.add(Entidad)
         SesionBD.commit()
         return True
+
+    def RecuperarRecordatorio(self, SesionBD: Session, Id: int) -> Optional[Recordatorio]:
+        Entidad = SesionBD.get(Recordatorio, Id)
+        if not Entidad:
+            return None
+        if Entidad.EliminadoEn is None:
+            return Entidad
+        # Validar que el Evento padre exista y no este eliminado
+        EventoEntidad = SesionBD.get(Evento, Entidad.EventoId)
+        if not EventoEntidad or EventoEntidad.EliminadoEn is not None:
+            return None
+        # TODO(bitacora): registrar quien y cuando recupera
+        Entidad.EliminadoEn = None
+        SesionBD.add(Entidad)
+        SesionBD.commit()
+        SesionBD.refresh(Entidad)
+        return Entidad

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Meta } from '../api/ClienteApi';
+import { Meta, RecuperarMeta } from '../api/ClienteApi';
 
 type Parametros = { DetalleMeta: { meta: Meta } };
 
@@ -27,8 +27,13 @@ export default function DetalleMetaScreen(): JSX.Element {
       <Text style={Estilos.Campo}>PropietarioId: {meta.PropietarioId}</Text>
       {meta.CreadoEn ? <Text style={Estilos.Campo}>CreadoEn: {meta.CreadoEn}</Text> : null}
       {meta.ActualizadoEn ? <Text style={Estilos.Campo}>ActualizadoEn: {meta.ActualizadoEn}</Text> : null}
+      {meta.EliminadoEn ? <Text style={[Estilos.Campo, { color: 'red' }]}>EliminadoEn: {meta.EliminadoEn}</Text> : null}
       <View style={{ height: 12 }} />
-      <Button title="Editar" onPress={() => navigation.navigate('CrearEditarMeta')} />
+      {meta.EliminadoEn ? (
+        <Button title="Recuperar" onPress={async () => { await RecuperarMeta(meta.Id); navigation.goBack(); }} />
+      ) : (
+        <Button title="Editar" onPress={() => navigation.navigate('CrearEditarMeta')} />
+      )}
     </View>
   );
 }

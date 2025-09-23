@@ -98,3 +98,11 @@ def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
     if not Exito:
         raise HTTPException(status_code=404, detail="Meta no encontrada")
     return {"ok": True}
+
+
+@Router.post("/metas/{Id}/recuperar")
+def RecuperarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
+    Entidad = Metas.RecuperarMeta(SesionBD, Id)
+    if Entidad is None:
+        raise HTTPException(status_code=400, detail="No se puede recuperar (meta inexistente)")
+    return Entidad

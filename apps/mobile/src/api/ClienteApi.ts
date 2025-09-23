@@ -131,3 +131,32 @@ export async function ActualizarUsuario(Id: number, cambios: Partial<Pick<Usuari
   if (!r.ok) throw new Error('Error al actualizar usuario');
   return r.json();
 }
+
+// Recuperaciones (undo)
+export async function RecuperarMeta(Id: number): Promise<Meta> {
+  const r = await fetch(`${ApiUrl}/metas/${Id}/recuperar`, { method: 'POST' });
+  if (!r.ok) throw new Error('No se pudo recuperar meta');
+  return r.json();
+}
+
+export async function RecuperarEvento(Id: number, UsuarioId?: number): Promise<Evento> {
+  const params = new URLSearchParams();
+  const zona = ObtenerZonaHoraria();
+  if (UsuarioId) params.append('UsuarioId', String(UsuarioId));
+  if (zona) params.append('ZonaHoraria', zona);
+  const q = params.toString();
+  const r = await fetch(`${ApiUrl}/eventos/${Id}/recuperar${q ? `?${q}` : ''}`, { method: 'POST' });
+  if (!r.ok) throw new Error('No se pudo recuperar evento');
+  return r.json();
+}
+
+export async function RecuperarRecordatorio(Id: number, UsuarioId?: number): Promise<Recordatorio> {
+  const params = new URLSearchParams();
+  const zona = ObtenerZonaHoraria();
+  if (UsuarioId) params.append('UsuarioId', String(UsuarioId));
+  if (zona) params.append('ZonaHoraria', zona);
+  const q = params.toString();
+  const r = await fetch(`${ApiUrl}/recordatorios/${Id}/recuperar${q ? `?${q}` : ''}`, { method: 'POST' });
+  if (!r.ok) throw new Error('No se pudo recuperar recordatorio');
+  return r.json();
+}
