@@ -47,3 +47,31 @@ export function installAxiosInterceptors(axiosInstance: import('axios').AxiosIns
     }
   );
 }
+
+// Helper for fetch()-based clients to normalize errors
+export async function fetchJson<T>(url: string, options: RequestInit | undefined, defaultMessage: string): Promise<T> {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      let detail: string | undefined;
+      try {
+        const data: any = await res.json();
+        detail = data?.detail || data?.message;
+      } catch {
+        // ignore JSON parse errors
+      }
+      const err: HttpError = { code: res.status, message: detail || defaultMessage };
+      throw err;
+    }
+    return res.json() as Promise<T>;
+  } catch (e: any) {
+    if (e && (typeof e.code !== 'undefined')) throw e as HttpError;
+    const msg = String(e?.message || e || defaultMessage);
+    if (msg.includes('Network request failed')) {
+      const err: HttpError = { code: 'NETWORK', message: 'No hay conexión con el servidor.', hint: 'Revisa API_BASE_URL o tu red.' };
+      throw err;
+    }
+    const err: HttpError = { code: 'NETWORK', message: msg };
+    throw err;
+  }
+}

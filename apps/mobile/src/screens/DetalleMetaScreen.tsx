@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
-import { showSuccess, showError } from '../ui/toast';
+import { showSuccess, showError, showRetry } from '../ui/toast';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Meta, RecuperarMeta } from '../api/ClienteApi';
@@ -31,7 +31,7 @@ export default function DetalleMetaScreen(): React.ReactElement {
       {meta.EliminadoEn ? <Text style={[Estilos.Campo, { color: 'red' }]}>EliminadoEn: {meta.EliminadoEn}</Text> : null}
       <View style={{ height: 12 }} />
       {meta.EliminadoEn ? (
-        <Button title="Recuperar" onPress={async () => { try { await RecuperarMeta(meta.Id); showSuccess('Meta recuperada'); navigation.goBack(); } catch (e: any) { showError(e?.message ?? 'No se pudo recuperar'); } }} />
+  <Button title="Recuperar" onPress={async () => { try { await RecuperarMeta(meta.Id); showSuccess('Meta recuperada'); navigation.goBack(); } catch (e: any) { showRetry(e?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarMeta(meta.Id); showSuccess('Meta recuperada'); navigation.goBack(); } catch (ee: any) { showError(ee?.message ?? 'No se pudo recuperar'); } }); } }} />
       ) : (
         <Button title="Editar" onPress={() => navigation.navigate('CrearEditarMeta', { meta })} />
       )}

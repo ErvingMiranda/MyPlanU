@@ -6,7 +6,7 @@ import { ActualizarUsuario } from '../api/ClienteApi';
 import { EstablecerZonaHoraria, ObtenerZonaHoraria } from '../userPrefs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { http, ping } from '../api/http';
-import { showError, showSuccess, showInfo } from '../ui/toast';
+import { showError, showSuccess, showInfo, showRetry } from '../ui/toast';
 
 export default function ConfiguracionScreen(): React.ReactElement {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -53,7 +53,17 @@ export default function ConfiguracionScreen(): React.ReactElement {
             if (res.ok) showInfo(`Conectado: ${res.url}`); else showError(`Sin conexión: ${res.url}`);
           } catch {
             SetPingEstado('fail');
-            showError('Sin conexión. Revisa la URL o tu red.');
+            showRetry('Sin conexión. Revisa la URL o tu red.', async () => {
+              try {
+                SetPingEstado('loading');
+                const res2 = await ping();
+                SetPingEstado(res2.ok ? 'ok' : 'fail');
+                if (res2.ok) showInfo(`Conectado: ${res2.url}`); else showError(`Sin conexión: ${res2.url}`);
+              } catch {
+                SetPingEstado('fail');
+                showError('Sigue sin conexión.');
+              }
+            });
           }
         }} />
         <Text style={{ marginLeft: 12 }}>{PingEstado === 'ok' ? '✅ OK' : PingEstado === 'fail' ? '❌ ERROR' : ''}</Text>
