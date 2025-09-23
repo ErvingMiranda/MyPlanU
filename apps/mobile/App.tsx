@@ -37,7 +37,7 @@ export default function AplicacionMovil(): JSX.Element {
       <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen name="LoginRegistro" component={LoginRegistroScreen} options={{ title: 'Login/Registro' }} />
-          <Stack.Screen name="Principal" component={TabsPrincipales} options={{ headerShown: false }} />
+          <Stack.Screen name="HomeTabs" component={TabsPrincipales} options={{ headerShown: false }} />
           <Stack.Screen name="DetalleMeta" component={DetalleMetaScreen} options={{ title: 'Detalle de Meta' }} />
           <Stack.Screen name="CrearEditarMeta" component={CrearEditarMetaScreen} options={{ title: 'Crear/Editar Meta' }} />
           <Stack.Screen name="ListaEventos" component={ListaEventosScreen} options={{ title: 'Eventos' }} />

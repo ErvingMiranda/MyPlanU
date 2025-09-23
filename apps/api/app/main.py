@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.views.HealthView import Router as SaludRouter
+from app.views.HealthView import Router as SaludRouter, RouterHealth as HealthRouter
 from app.views.GoalView import Router as MetasRouter
 from app.views.EventoView import Router as EventosRouter
 from app.views.PapeleraView import Router as PapeleraRouter
@@ -28,6 +28,7 @@ def CrearAplicacion() -> FastAPI:
 
     # Rutas
     Aplicacion.include_router(SaludRouter, prefix="/salud", tags=["salud"])
+    Aplicacion.include_router(HealthRouter, prefix="/health", tags=["health"])
     # GoalView maneja /usuarios y /metas, EventoView maneja /eventos y /recordatorios
     Aplicacion.include_router(MetasRouter, tags=["usuarios", "metas"])
     Aplicacion.include_router(EventosRouter, tags=["eventos", "recordatorios"])

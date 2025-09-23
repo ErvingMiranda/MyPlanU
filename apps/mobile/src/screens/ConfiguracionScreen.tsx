@@ -34,12 +34,12 @@ export default function ConfiguracionScreen(): JSX.Element {
             const id = parseInt(UsuarioId, 10);
             if (id) await ActualizarUsuario(id, { ZonaHoraria });
             Alert.alert('Listo', 'Preferencias guardadas');
-            navigation.navigate('Principal');
+            navigation.navigate('HomeTabs');
           } catch (e: any) {
             Alert.alert('Error', e?.message ?? 'No se pudo guardar');
           }
         }} />
-        <Button title="Cancelar" onPress={() => navigation.navigate('Principal')} />
+  <Button title="Cancelar" onPress={() => navigation.navigate('HomeTabs')} />
       </View>
     </View>
   );

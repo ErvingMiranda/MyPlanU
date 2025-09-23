@@ -72,7 +72,7 @@ export default function NotificacionesScreen(): JSX.Element {
         ListEmptyComponent={!isLoading ? <Text>No hay recordatorios proximos.</Text> : null}
       />
       <View style={{ height: 8 }} />
-      <Button title="Volver" onPress={() => navigation.navigate('Principal')} />
+  <Button title="Volver" onPress={() => navigation.navigate('HomeTabs')} />
     </View>
   );
 }

@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.13.1
+MyPlanU v0.13.2
 =================
 
 Descripcion
@@ -202,6 +202,13 @@ v0.13.1
     curl "http://localhost:8000/papelera/eventos?MetaId=123"
   - Recordatorios eliminados de un evento, interpretando el filtro de fecha de entrada en zona local:
     curl "http://localhost:8000/papelera/recordatorios?EventoId=45&Desde=2025-01-01T00:00:00&ZonaHorariaEntrada=America/Bogota&ZonaHoraria=America/Bogota"
+
+v0.13.2
+- Base URL y healthcheck:
+  - Backend ahora expone tambien /health (alias de /salud) para checks de infraestructura.
+  - Movil: nuevo cliente HTTP en `apps/mobile/src/api/http.ts` (Axios) que lee API_BASE_URL y EXPO_PUBLIC_API_URL.
+  - Agrega `apps/mobile/.env.example` con API_BASE_URL. En simulador usa 127.0.0.1; en dispositivo fisico, usa la IP LAN de tu maquina (ej. http://192.168.1.10:8000).
+  - Funcion `ping()` consulta /health y cae a /salud. Reemplazar mensajes genericos de red por un toast con sugerencia de revisar URL o conectividad.
 
 TODOs siguientes (planeados)
 ----------------------------
