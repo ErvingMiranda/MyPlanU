@@ -7,6 +7,7 @@ import { EstablecerZonaHoraria, ObtenerZonaHoraria } from '../userPrefs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { http, ping } from '../api/http';
 import { showError, showSuccess, showInfo, showRetry } from '../ui/toast';
+import { logEvent } from '../telemetry';
 
 export default function ConfiguracionScreen(): React.ReactElement {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -50,17 +51,21 @@ export default function ConfiguracionScreen(): React.ReactElement {
             SetPingEstado('loading');
             const res = await ping();
             SetPingEstado(res.ok ? 'ok' : 'fail');
+            logEvent('network_ping', { ok: res.ok, url: res.url });
             if (res.ok) showInfo(`Conectado: ${res.url}`); else showError(`Sin conexión: ${res.url}`);
           } catch {
             SetPingEstado('fail');
+            logEvent('network_ping', { ok: false, url: http.defaults.baseURL });
             showRetry('Sin conexión. Revisa la URL o tu red.', async () => {
               try {
                 SetPingEstado('loading');
                 const res2 = await ping();
                 SetPingEstado(res2.ok ? 'ok' : 'fail');
+                logEvent('network_ping', { ok: res2.ok, url: res2.url, retry: true });
                 if (res2.ok) showInfo(`Conectado: ${res2.url}`); else showError(`Sin conexión: ${res2.url}`);
               } catch {
                 SetPingEstado('fail');
+                logEvent('network_ping', { ok: false, url: http.defaults.baseURL, retry: true });
                 showError('Sigue sin conexión.');
               }
             });
@@ -79,9 +84,11 @@ export default function ConfiguracionScreen(): React.ReactElement {
               http.defaults.baseURL = ApiBaseUrl;
             }
             showSuccess('Preferencias guardadas');
+            logEvent('prefs_save_success', { ZonaHoraria, ApiBaseUrl });
             navigation.navigate('HomeTabs');
           } catch (e: any) {
             showError(e?.message ?? 'No se pudo guardar');
+            logEvent('prefs_save_error', { message: e?.message });
           }
         }} />
   <Button title="Cancelar" onPress={() => navigation.navigate('HomeTabs')} />

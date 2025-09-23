@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Button } from 'react-native';
 import { showError, showSuccess, showRetry } from '../ui/toast';
+import { logEvent } from '../telemetry';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ObtenerZonaHoraria } from '../userPrefs';
 import { RecuperarMeta, RecuperarEvento, RecuperarRecordatorio, ObtenerMetasEliminadas, ObtenerEventosEliminados, ObtenerRecordatoriosEliminados, Meta, Evento, Recordatorio } from '../api/ClienteApi';
@@ -34,7 +35,7 @@ export default function PapeleraScreen(): React.ReactElement {
             <ItemContainer>
               <Text style={Estilos.ItemTitulo}>{m.Titulo}</Text>
               <Text>EliminadoEn: {m.EliminadoEn ? new Date(m.EliminadoEn).toLocaleString() : '-'}</Text>
-              <Button title="Recuperar" onPress={async () => { try { await RecuperarMeta(m.Id); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Meta recuperada'); } catch (err: any) { showRetry(err?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarMeta(m.Id); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Meta recuperada'); } catch (e: any) { showError(e?.message ?? 'No se pudo recuperar'); } }); } }} />
+              <Button title="Recuperar" onPress={async () => { try { await RecuperarMeta(m.Id); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Meta recuperada'); logEvent('recover_success', { tipo: 'Meta', Id: m.Id }); } catch (err: any) { logEvent('recover_error', { tipo: 'Meta', Id: m.Id, message: err?.message }); showRetry(err?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarMeta(m.Id); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Meta recuperada'); logEvent('recover_success', { tipo: 'Meta', Id: m.Id, retry: true }); } catch (e: any) { logEvent('recover_error', { tipo: 'Meta', Id: m.Id, message: e?.message, retry: true }); showError(e?.message ?? 'No se pudo recuperar'); } }); } }} />
             </ItemContainer>
           )}
         />
@@ -55,8 +56,10 @@ export default function PapeleraScreen(): React.ReactElement {
                   await RecuperarEvento(e.Id, e.PropietarioId);
                   cliente.invalidateQueries({ queryKey: ['papelera'] });
                   showSuccess('Evento recuperado');
+                  logEvent('recover_success', { tipo: 'Evento', Id: e.Id });
                 } catch (err: any) {
-                  showRetry(err?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarEvento(e.Id, e.PropietarioId); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Evento recuperado'); } catch (e: any) { showError(e?.message ?? 'No se pudo recuperar'); } });
+                  logEvent('recover_error', { tipo: 'Evento', Id: e.Id, message: err?.message });
+                  showRetry(err?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarEvento(e.Id, e.PropietarioId); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Evento recuperado'); logEvent('recover_success', { tipo: 'Evento', Id: e.Id, retry: true }); } catch (e: any) { logEvent('recover_error', { tipo: 'Evento', Id: e.Id, message: e?.message, retry: true }); showError(e?.message ?? 'No se pudo recuperar'); } });
                 }
               }} />
             </ItemContainer>
@@ -78,8 +81,10 @@ export default function PapeleraScreen(): React.ReactElement {
                   await RecuperarRecordatorio(r.Id);
                   cliente.invalidateQueries({ queryKey: ['papelera'] });
                   showSuccess('Recordatorio recuperado');
+                  logEvent('recover_success', { tipo: 'Recordatorio', Id: r.Id });
                 } catch (err: any) {
-                  showRetry(err?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarRecordatorio(r.Id); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Recordatorio recuperado'); } catch (e: any) { showError(e?.message ?? 'No se pudo recuperar'); } });
+                  logEvent('recover_error', { tipo: 'Recordatorio', Id: r.Id, message: err?.message });
+                  showRetry(err?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarRecordatorio(r.Id); cliente.invalidateQueries({ queryKey: ['papelera'] }); showSuccess('Recordatorio recuperado'); logEvent('recover_success', { tipo: 'Recordatorio', Id: r.Id, retry: true }); } catch (e: any) { logEvent('recover_error', { tipo: 'Recordatorio', Id: r.Id, message: e?.message, retry: true }); showError(e?.message ?? 'No se pudo recuperar'); } });
                 }
               }} />
             </ItemContainer>

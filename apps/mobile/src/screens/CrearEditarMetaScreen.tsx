@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert } from 'react-native';
 import { showError, showSuccess } from '../ui/toast';
+import { logEvent } from '../telemetry';
 import { createGoal, updateGoal } from '../services/goals';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
@@ -44,21 +45,25 @@ export default function CrearEditarMetaScreen(): React.ReactElement {
               try {
                 await updateGoal(meta.Id, { Titulo, TipoMeta, Descripcion });
                 showSuccess('Meta actualizada');
+                logEvent('goal_save_success', { mode: 'update', Id: meta.Id });
               } catch (e: any) {
                 // rollback UI state
                 EstablecerTitulo(prev.Titulo ?? '');
                 EstablecerTipoMeta(prev.TipoMeta ?? '');
                 EstablecerDescripcion(prev.Descripcion ?? '');
+                logEvent('goal_save_error', { mode: 'update', Id: meta.Id, message: e?.message });
                 throw e;
               }
             } else {
               await createGoal({ Titulo, TipoMeta, Descripcion, PropietarioId: 1 });
               showSuccess('Meta creada');
+              logEvent('goal_save_success', { mode: 'create' });
             }
             await cliente.invalidateQueries({ queryKey: ['metas'] });
             navigation.goBack();
           } catch (e: any) {
             showError(e?.message ?? 'No se pudo guardar la meta');
+            logEvent('goal_save_error', { mode: meta ? 'update' : 'create', message: e?.message });
           } finally {
             SetGuardando(false);
           }

@@ -235,6 +235,12 @@ npm test
   - Servicios de metas (Axios) con escenarios de éxito, 404 y timeout (axios-mock-adapter).
   - Cliente fetch de recordatorios/metas con mocks de fetch manuales (éxito y 409).
 
+v0.13.9
+- Telemetría dev (opcional):
+  - Nuevo módulo `src/telemetry.ts` con `logEvent(name, data)` y buffer en memoria (200 eventos).
+  - Activado solo en `__DEV__` o si `EXPO_PUBLIC_TELEMETRY=dev`.
+  - Eventos instrumentados: `network_ping`, `prefs_save_*`, `goal_save_*`, `recover_*` (meta/evento/recordatorio).
+
 TODOs siguientes (planeados)
 ----------------------------
 - Permisos por rol: Dueno, Colaborador, Lector (validacion en Services).

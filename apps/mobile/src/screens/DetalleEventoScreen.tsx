@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
 import { showSuccess, showError, showRetry } from '../ui/toast';
+import { logEvent } from '../telemetry';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Evento, RecuperarEvento } from '../api/ClienteApi';
@@ -29,7 +30,7 @@ export default function DetalleEventoScreen(): React.ReactElement {
       {evento.EliminadoEn ? <Text style={[Estilos.Campo, { color: 'red' }]}>EliminadoEn: {evento.EliminadoEn}</Text> : null}
       <View style={{ height: 8 }} />
       {evento.EliminadoEn ? (
-  <Button title="Recuperar" onPress={async () => { try { await RecuperarEvento(evento.Id, evento.PropietarioId); showSuccess('Evento recuperado'); navigation.goBack(); } catch (e: any) { showRetry(e?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarEvento(evento.Id, evento.PropietarioId); showSuccess('Evento recuperado'); navigation.goBack(); } catch (ee: any) { showError(ee?.message ?? 'No se pudo recuperar'); } }); } }} />
+  <Button title="Recuperar" onPress={async () => { try { await RecuperarEvento(evento.Id, evento.PropietarioId); showSuccess('Evento recuperado'); logEvent('recover_success', { tipo: 'Evento', Id: evento.Id }); navigation.goBack(); } catch (e: any) { logEvent('recover_error', { tipo: 'Evento', Id: evento.Id, message: e?.message }); showRetry(e?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarEvento(evento.Id, evento.PropietarioId); showSuccess('Evento recuperado'); logEvent('recover_success', { tipo: 'Evento', Id: evento.Id, retry: true }); navigation.goBack(); } catch (ee: any) { logEvent('recover_error', { tipo: 'Evento', Id: evento.Id, message: ee?.message, retry: true }); showError(ee?.message ?? 'No se pudo recuperar'); } }); } }} />
       ) : (
         <>
           <Text style={Estilos.Subtitulo}>Participantes</Text>
