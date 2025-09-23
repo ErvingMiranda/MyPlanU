@@ -4,6 +4,6 @@ from fastapi import APIRouter
 Router = APIRouter()
 
 
-@Router.get("/vivo")
+@Router.get("")
 def ObtenerEstado():
-    return {"Estado": "ok", "Version": "0.1.0"}
+    return {"estado": "ok"}

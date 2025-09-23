@@ -1,10 +1,10 @@
 # MyPlanU
-MyPlanU v0.1
+MyPlanU v0.2
 =================
 
 Descripcion
 -----------
-MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Esta version inicial (v0.1) instala el monorepo con arquitectura Models–Services–Views, un backend en Python (FastAPI + SQLModel + SQLite) y un frontend movil con Expo React Native + TypeScript. Aun sin autenticacion real ni Docker.
+MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Esta version (v0.2) extiende el backend con modelos y CRUD en español (soft delete) y mantiene el frontend movil base.
 
 Estructura del Monorepo
 -----------------------
@@ -59,7 +59,8 @@ npm run start
 
 Cambios de esta version
 -----------------------
-- Monorepo creado con back y movil basicos.
-- Estructura Models–Services–Views en el backend (HealthView basico).
-- Convenciones de nombres y estilo establecidas.
-- Archivos base: .editorconfig, .gitignore, README.md.
+- Backend actualizado a CRUD en español con SQLModel (soft delete):
+	- Modelos: Usuario(Id, Correo, Nombre, CreadoEn, EliminadoEn), Meta(Id, PropietarioId, Titulo, Descripcion, TipoMeta, CreadoEn, ActualizadoEn, EliminadoEn)
+	- Reglas: PropietarioId debe existir al crear Meta; listados excluyen EliminadoEn != None; PATCH actualiza ActualizadoEn
+	- Rutas: GET /salud → {"estado":"ok"}; CRUD /usuarios; CRUD /metas
+- Frontend movil base (Expo + TS) sin cambios funcionales.
