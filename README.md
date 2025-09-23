@@ -1,10 +1,10 @@
 # MyPlanU
-MyPlanU v0.3
+MyPlanU v0.4
 =================
 
 Descripcion
 -----------
-MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Esta version (v0.3) refactoriza la capa Services en el backend, mantiene CRUD en español con soft delete y deja TODOs claros para la siguiente iteracion.
+MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Esta version (v0.4) agrega la base de la app movil con navegacion y consumo de la API de metas, manteniendo las convenciones en español y PascalCase.
 
 Estructura del Monorepo
 -----------------------
@@ -36,7 +36,8 @@ Backend (API):
 
 Movil (Expo):
 1. Instalar dependencias de Node.
-2. Levantar el servidor de Expo.
+2. Definir la URL de la API (opcional). Puedes usar EXPO_PUBLIC_API_URL para apuntar al backend.
+3. Levantar el servidor de Expo.
 
 Comandos Rapidos (opcionales)
 -----------------------------
@@ -54,18 +55,25 @@ Movil:
 ```
 cd apps/mobile
 npm install
+# Opcional: configurar la URL del backend para el cliente movil
+# export EXPO_PUBLIC_API_URL="http://127.0.0.1:8000"
 npm run start
 ```
 
 Cambios de esta version
 -----------------------
-- Refactor Services (espaniol + PascalCase):
-	- UsuariosService.py: Crear, Listar, Obtener, Actualizar, Eliminar, BuscarPorCorreo, Existe
-	- MetasService.py: CrearMeta, ListarMetas, Obtener, ActualizarMeta, EliminarMeta
-- Reglas: Validar PropietarioId y bloquear operaciones si EliminadoEn no es nulo; listados excluyen EliminadoEn != None; PATCH actualiza ActualizadoEn.
-- Rutas: GET /salud → {"estado":"ok"}; CRUD /usuarios; CRUD /metas.
-- Frontend movil base (Expo + TS) sin cambios funcionales.
+- App movil base (Expo + TypeScript):
+	- Navegacion: Stack (LoginRegistro → Principal) y Tabs (Principal, Notificaciones, Configuracion).
+	- Pantallas: LoginRegistroScreen, PrincipalScreen (lista metas desde API), DetalleMetaScreen, CrearEditarMetaScreen (formulario basico sin persistencia), NotificacionesScreen, ConfiguracionScreen.
+	- Cliente API en `apps/mobile/src/api/ClienteApi.ts` y configuracion de URL en `apps/mobile/src/config.ts` (usa `process.env.EXPO_PUBLIC_API_URL` o `http://127.0.0.1:8000`).
+	- React Query configurado en el root para consultas (lista de metas).
+
+Backend (continuidad de v0.3):
+	- Services en español y PascalCase.
+	- Rutas: GET /salud; CRUD /usuarios; CRUD /metas.
 
 TODOs siguientes (planeados):
 - Permisos por rol: Dueno, Colaborador, Lector (validacion en Services).
 - Cascada logica: al eliminar Meta, propagar a Eventos y Recordatorios.
+ - Persistencia real en Crear/Editar Meta desde movil.
+ - Manejo de autenticacion real en Login/Registro.

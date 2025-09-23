@@ -1,20 +1,43 @@
 import React from 'react';
-import { SafeAreaView, Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import LoginRegistroScreen from './src/screens/LoginRegistroScreen';
+import PrincipalScreen from './src/screens/PrincipalScreen';
+import DetalleMetaScreen from './src/screens/DetalleMetaScreen';
+import CrearEditarMetaScreen from './src/screens/CrearEditarMetaScreen';
+import NotificacionesScreen from './src/screens/NotificacionesScreen';
+import ConfiguracionScreen from './src/screens/ConfiguracionScreen';
 
-function PantallaInicio(): JSX.Element {
+const Cliente = new QueryClient();
+
+const Stack = createNativeStackNavigator();
+const Tabs = createBottomTabNavigator();
+
+function TabsPrincipales(): JSX.Element {
   return (
-    <View style={Estilos.Contenedor}>
-      <Text style={Estilos.Titulo}>MyPlanU</Text>
-      <Text>Bienvenido a v0.1</Text>
-    </View>
+    <Tabs.Navigator>
+      <Tabs.Screen name="Principal" component={PrincipalScreen} />
+      <Tabs.Screen name="Notificaciones" component={NotificacionesScreen} />
+      <Tabs.Screen name="Configuracion" component={ConfiguracionScreen} />
+    </Tabs.Navigator>
   );
 }
 
 export default function AplicacionMovil(): JSX.Element {
   return (
-    <SafeAreaView style={Estilos.Contenedor}>
-      <PantallaInicio />
-    </SafeAreaView>
+    <QueryClientProvider client={Cliente}>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen name="LoginRegistro" component={LoginRegistroScreen} options={{ title: 'Login/Registro' }} />
+          <Stack.Screen name="Principal" component={TabsPrincipales} options={{ headerShown: false }} />
+          <Stack.Screen name="DetalleMeta" component={DetalleMetaScreen} options={{ title: 'Detalle de Meta' }} />
+          <Stack.Screen name="CrearEditarMeta" component={CrearEditarMetaScreen} options={{ title: 'Crear/Editar Meta' }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </QueryClientProvider>
   );
 }
 
