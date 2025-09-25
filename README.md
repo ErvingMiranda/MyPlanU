@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.14.0
+MyPlanU v0.14.1
 =================
 
 Descripcion
@@ -247,6 +247,17 @@ v0.14.0
   - En red caída: la lista usa el cache y crear/editar operan de forma optimista y se encolan para sincronizar luego.
   - Al iniciar la app se intenta procesar la cola automáticamente.
   - Nuevo botón en Configuración: “Reintentar sync offline” para forzar la sincronización manual y ver resultado por toasts.
+
+v0.14.1 (Fixes y coherencia)
+- Backend:
+  - Version de la API alineada al changelog (FastAPI `version=0.14.1`).
+  - Parametrización de CORS mediante variable de entorno `MYPLANU_CORS_ORIGINS` (lista separada por comas, fallback `*`).
+  - Endpoint `/papelera/recordatorios` corrigió uso errado de `EventosService` y ahora emplea `RecordatoriosService.ListarRecordatoriosEliminados`.
+  - Comentario y refuerzo en `.gitignore` para excluir bases SQLite (`*.db`, `apps/api/datos.db`).
+- Móvil:
+  - `PrincipalScreen` ahora usa `services/goals.listGoals()` (cache + cola offline) en lugar de `ClienteApi.ObtenerMetas` asegurando coherencia con la funcionalidad offline de v0.14.0.
+- Documentación:
+  - Encabezado actualizado a `MyPlanU v0.14.1` y sección de fixes añadida.
 
 TODOs siguientes (planeados)
 ----------------------------

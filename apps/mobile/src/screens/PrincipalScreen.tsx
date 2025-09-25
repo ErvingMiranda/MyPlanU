@@ -2,13 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Button } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { APP_VERSION } from '../version';
-import { ObtenerMetas, Meta } from '../api/ClienteApi';
+// Se migra a servicio offline-aware de metas
+import { listGoals, type Goal } from '../services/goals';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, any>;
 
 export default function PrincipalScreen({ navigation }: Props): React.ReactElement {
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['metas'], queryFn: ObtenerMetas });
+  const { data, isLoading, isError } = useQuery({ queryKey: ['metas'], queryFn: listGoals });
 
   return (
     <View style={Estilos.Contenedor}>
@@ -23,8 +24,8 @@ export default function PrincipalScreen({ navigation }: Props): React.ReactEleme
       {isLoading && <ActivityIndicator />} 
       {isError && <Text>Ocurrió un error al cargar las metas.</Text>}
       <FlatList
-        data={data ?? []}
-        keyExtractor={(item) => String(item.Id)}
+  data={(data as Goal[] | undefined) ?? []}
+  keyExtractor={(item: Goal) => String(item.Id)}
         renderItem={({ item }) => (
           <TouchableOpacity style={Estilos.Item} onPress={() => navigation.navigate('DetalleMeta', { meta: item })}>
             <Text style={Estilos.Titulo}>{item.Titulo}</Text>
