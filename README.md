@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.15.0 (en desarrollo)
+MyPlanU v0.15.1 (en desarrollo)
 =================
 
 Descripcion
@@ -259,7 +259,7 @@ v0.14.1 (Fixes y coherencia)
 - Documentación:
   - Encabezado actualizado a `MyPlanU v0.14.1` y sección de fixes añadida.
 
-v0.15.0 (JSON bodies y contratos unificados) [EN DESARROLLO]
+v0.15.0 (JSON bodies y contratos unificados)
 - Backend:
   - Introducidos modelos Pydantic (`schemas.py`) para request/response: MetaCrear/Actualizar/Respuesta, EventoCrear/Actualizar/Respuesta, RecordatorioCrear/Actualizar/Respuesta.
   - Endpoints POST/PATCH de `/metas`, `/eventos` y `/recordatorios` ahora aceptan cuerpos JSON en lugar de query params.
@@ -350,3 +350,72 @@ TODOs siguientes (planeados)
 - Cascada logica: al eliminar Meta, propagar a Eventos y Recordatorios.
 - Persistencia real en Crear/Editar Meta desde movil.
 - Manejo de autenticacion real en Login/Registro.
+
+v0.15.1 (Hardening repetición y pruebas)
+- Backend:
+  - `DiasSemana` ahora se expone como lista en todas las respuestas (antes CSV). La conversión lista↔CSV se centralizó en Services.
+  - Validación de `IntervaloRepeticion` movida a Services para emitir `EventoInvalido` / `RecordatorioInvalido` (400) en lugar de 422 de esquema.
+  - Respuestas de eventos/recordatorios normalizan repetición y mantienen patrones de error estandarizados.
+  - Nuevas pruebas: proyección semanal con DiasSemana, intervalos negativos → error 400, persistencia de DiasSemana en recordatorios.
+- Móvil:
+  - Cola offline intacta; nuevas pruebas Jest para flujo base, reintento parcial, orden create→update y persistencia tras reinicio.
+  - Actualizado a consumir `DiasSemana` como lista (sin dependencia de CSV legacy).
+- Documentación:
+  - Sección de errores estandarizados agregada.
+  - Changelog marca 0.15.0 como estable y describe cambios de 0.15.1.
+- Notas:
+  - Breaking: clientes que esperaban `DiasSemana` CSV deben adaptarse (móvil ya alineado).
+  - Preparación para futuras mejoras de permisos y autenticación.
+
+Errores estandarizados (patrones y ejemplos)
+-------------------------------------------
+El backend expone mensajes de error consistentes en `detail` para facilitar el mapeo en el cliente. Formatos clave:
+
+1. Validaciones de dominio (400):
+   - `MetaInvalida: <motivo>`
+   - `EventoInvalido: <motivo>`
+   - `RecordatorioInvalido: <motivo>`
+   Ejemplos:
+```json
+{
+  "detail": "EventoInvalido: IntervaloRepeticion debe ser > 0"
+}
+```
+```json
+{
+  "detail": "RecordatorioInvalido: FechaHora no puede estar en el pasado"
+}
+```
+
+2. Recurso no encontrado (404):
+```json
+{
+  "detail": "Meta no encontrada"
+}
+```
+```json
+{
+  "detail": "Evento no encontrado"
+}
+```
+
+3. Conflictos (409) (ej. duplicados):
+```json
+{
+  "detail": "MetaInvalida: ya existe una meta con ese Titulo para el Propietario"
+}
+```
+
+4. Errores de validación de entrada (422) (Pydantic) se reservan para formato JSON o tipos erróneos, pero la mayoría de reglas de negocio se trasladaron a Services para devolver 400 con los patrones anteriores.
+
+5. Eliminados/recuperación (400/409):
+```json
+{
+  "detail": "EventoInvalido: no se puede recuperar porque la Meta padre sigue eliminada"
+}
+```
+
+Buenas prácticas cliente:
+- Mostrar `detail` directamente en toasts si inicia con `<Algo>Invalido:` recortando el prefijo opcionalmente.
+- Reintentos automáticos sólo para errores de red (timeout, offline) y no para 400/409.
+- Mapear 404 a un estado de "Recurso eliminado o inexistente" y ofrecer navegación atrás.
