@@ -8,6 +8,14 @@ from app.core.Database import ObtenerSesion, IniciarTablas
 from app.services.EventosService import EventosService, RecordatoriosService
 from app.services.ParticipantesService import ParticipantesService
 from app.core.Permisos import RolParticipante
+from app.schemas import (
+    EventoCrear,
+    EventoActualizar,
+    EventoRespuesta,
+    RecordatorioCrear,
+    RecordatorioActualizar,
+    RecordatorioRespuesta,
+)
 from app.services.UsuariosService import UsuariosService
 
 try:
@@ -123,46 +131,47 @@ def ListarEventosProximos(
     return salida
 
 
-@Router.post("/eventos")
+@Router.post("/eventos", response_model=EventoRespuesta, status_code=201)
 def CrearEvento(
-    MetaId: int,
-    PropietarioId: int,
-    Titulo: str,
-    Inicio: datetime,
-    Fin: datetime,
-    Descripcion: Optional[str] = None,
-    Ubicacion: Optional[str] = None,
+    Datos: EventoCrear,
     ZonaHorariaEntrada: Optional[str] = None,
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    # Normalizar a UTC naive
-    ini_utc = _a_utc_naive(Inicio, ZonaHorariaEntrada)
-    fin_utc = _a_utc_naive(Fin, ZonaHorariaEntrada)
+    ini_utc = _a_utc_naive(Datos.Inicio, ZonaHorariaEntrada)
+    fin_utc = _a_utc_naive(Datos.Fin, ZonaHorariaEntrada)
+    # Convertir DiasSemana lista -> CSV
+    dias_csv = None
+    if Datos.DiasSemana:
+        dias_csv = ",".join(Datos.DiasSemana)
     Entidad = Eventos.CrearEvento(
         SesionBD,
-        MetaId=MetaId,
-        PropietarioId=PropietarioId,
-        Titulo=Titulo,
+        MetaId=Datos.MetaId,
+        PropietarioId=Datos.PropietarioId,
+        Titulo=Datos.Titulo,
         Inicio=ini_utc,
         Fin=fin_utc,
-        Descripcion=Descripcion,
-        Ubicacion=Ubicacion,
+        Descripcion=Datos.Descripcion,
+        Ubicacion=Datos.Ubicacion,
         Rol=Rol,
     )
     if Entidad is None:
-        raise HTTPException(status_code=400, detail="Datos invalidos (Meta/Propietario inexistentes o Inicio >= Fin)")
-    # Responder en zona del usuario si aplica
+        raise HTTPException(status_code=400, detail="EventoInvalido: Meta/Propietario inexistentes, rol no permitido o rango de tiempo")
+    # Asignar repeticion si procede
+    if Datos.FrecuenciaRepeticion:
+        Entidad.FrecuenciaRepeticion = Datos.FrecuenciaRepeticion
+        Entidad.IntervaloRepeticion = Datos.IntervaloRepeticion
+        Entidad.DiasSemana = dias_csv
+        SesionBD.add(Entidad)
+        SesionBD.commit()
+        SesionBD.refresh(Entidad)
     tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
-    obj = Entidad.dict()
-    obj["Inicio"] = _a_zona_iso(Entidad.Inicio, tz)
-    obj["Fin"] = _a_zona_iso(Entidad.Fin, tz)
-    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
-    obj["ActualizadoEn"] = _a_zona_iso(Entidad.ActualizadoEn, tz) if Entidad.ActualizadoEn else None
-    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
-    return obj
+    # Formateo manual manteniendo response_model casting
+    Entidad.Inicio = Entidad.Inicio  # ya UTC naive
+    Entidad.Fin = Entidad.Fin
+    return Entidad
 
 
 @Router.get("/eventos/{Id}")
@@ -185,35 +194,39 @@ def ObtenerEvento(
     return obj
 
 
-@Router.patch("/eventos/{Id}")
+@Router.patch("/eventos/{Id}", response_model=EventoRespuesta)
 def ActualizarEvento(
     Id: int,
-    Titulo: Optional[str] = None,
-    Descripcion: Optional[str] = None,
-    Inicio: Optional[datetime] = None,
-    Fin: Optional[datetime] = None,
-    Ubicacion: Optional[str] = None,
+    Cambios: EventoActualizar,
     ZonaHorariaEntrada: Optional[str] = None,
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    ini_utc = _a_utc_naive(Inicio, ZonaHorariaEntrada) if Inicio is not None else None
-    fin_utc = _a_utc_naive(Fin, ZonaHorariaEntrada) if Fin is not None else None
+    ini_utc = _a_utc_naive(Cambios.Inicio, ZonaHorariaEntrada) if Cambios.Inicio is not None else None
+    fin_utc = _a_utc_naive(Cambios.Fin, ZonaHorariaEntrada) if Cambios.Fin is not None else None
     Entidad = Eventos.ActualizarEvento(
-        SesionBD, Id, Titulo=Titulo, Descripcion=Descripcion, Inicio=ini_utc, Fin=fin_utc, Ubicacion=Ubicacion, Rol=Rol
+        SesionBD,
+        Id,
+        Titulo=Cambios.Titulo,
+        Descripcion=Cambios.Descripcion,
+        Inicio=ini_utc,
+        Fin=fin_utc,
+        Ubicacion=Cambios.Ubicacion,
+        Rol=Rol,
     )
     if Entidad is None:
-        raise HTTPException(status_code=400, detail="Evento no encontrado o valido (Inicio < Fin)")
-    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
-    obj = Entidad.dict()
-    obj["Inicio"] = _a_zona_iso(Entidad.Inicio, tz)
-    obj["Fin"] = _a_zona_iso(Entidad.Fin, tz)
-    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
-    obj["ActualizadoEn"] = _a_zona_iso(Entidad.ActualizadoEn, tz) if Entidad.ActualizadoEn else None
-    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
-    return obj
+        raise HTTPException(status_code=400, detail="EventoInvalido: no encontrado, eliminado o rango de tiempo invalido")
+    # Actualizar repeticion si viene en Cambios
+    if Cambios.FrecuenciaRepeticion is not None:
+        Entidad.FrecuenciaRepeticion = Cambios.FrecuenciaRepeticion
+        Entidad.IntervaloRepeticion = Cambios.IntervaloRepeticion
+        Entidad.DiasSemana = ",".join(Cambios.DiasSemana) if Cambios.DiasSemana else None
+        SesionBD.add(Entidad)
+        SesionBD.commit()
+        SesionBD.refresh(Entidad)
+    return Entidad
 
 
 @Router.delete("/eventos/{Id}")
@@ -263,41 +276,31 @@ def ListarRecordatorios(
     return salida
 
 
-@Router.post("/recordatorios")
+@Router.post("/recordatorios", response_model=RecordatorioRespuesta, status_code=201)
 def CrearRecordatorio(
-    EventoId: int,
-    FechaHora: datetime,
-    Canal: str,
-    Mensaje: Optional[str] = None,
-    FrecuenciaRepeticion: Optional[str] = None,
-    IntervaloRepeticion: Optional[int] = None,
-    DiasSemana: Optional[str] = None,
+    Datos: RecordatorioCrear,
     ZonaHorariaEntrada: Optional[str] = None,
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    fh_utc = _a_utc_naive(FechaHora, ZonaHorariaEntrada)
+    fh_utc = _a_utc_naive(Datos.FechaHora, ZonaHorariaEntrada)
+    dias_csv = ",".join(Datos.DiasSemana) if Datos.DiasSemana else None
     Entidad = Recordatorios.CrearRecordatorio(
         SesionBD,
-        EventoId=EventoId,
+        EventoId=Datos.EventoId,
         FechaHora=fh_utc,
-        Canal=Canal,
-        Mensaje=Mensaje,
-        FrecuenciaRepeticion=FrecuenciaRepeticion,
-        IntervaloRepeticion=IntervaloRepeticion,
-        DiasSemana=DiasSemana,
+        Canal=Datos.Canal,
+        Mensaje=Datos.Mensaje,
+        FrecuenciaRepeticion=Datos.FrecuenciaRepeticion,
+        IntervaloRepeticion=Datos.IntervaloRepeticion,
+        DiasSemana=dias_csv,
         Rol=Rol,
     )
     if Entidad is None:
-        raise HTTPException(status_code=400, detail="Datos invalidos (evento inexistente o FechaHora en pasado)")
-    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
-    obj = Entidad.dict()
-    obj["FechaHora"] = _a_zona_iso(Entidad.FechaHora, tz)
-    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
-    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
-    return obj
+        raise HTTPException(status_code=400, detail="RecordatorioInvalido: evento inexistente/eliminado, rol no permitido o fecha pasada")
+    return Entidad
 
 
 @Router.get("/recordatorios/{Id}")
@@ -318,43 +321,33 @@ def ObtenerRecordatorio(
     return obj
 
 
-@Router.patch("/recordatorios/{Id}")
+@Router.patch("/recordatorios/{Id}", response_model=RecordatorioRespuesta)
 def ActualizarRecordatorio(
     Id: int,
-    FechaHora: Optional[datetime] = None,
-    Canal: Optional[str] = None,
-    Enviado: Optional[bool] = None,
-    Mensaje: Optional[str] = None,
-    FrecuenciaRepeticion: Optional[str] = None,
-    IntervaloRepeticion: Optional[int] = None,
-    DiasSemana: Optional[str] = None,
+    Cambios: RecordatorioActualizar,
     ZonaHorariaEntrada: Optional[str] = None,
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
     Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
 ):
-    fh_utc = _a_utc_naive(FechaHora, ZonaHorariaEntrada) if FechaHora is not None else None
+    fh_utc = _a_utc_naive(Cambios.FechaHora, ZonaHorariaEntrada) if Cambios.FechaHora is not None else None
+    dias_csv = ",".join(Cambios.DiasSemana) if Cambios.DiasSemana else None
     Entidad = Recordatorios.ActualizarRecordatorio(
         SesionBD,
         Id,
         FechaHora=fh_utc,
-        Canal=Canal,
-        Enviado=Enviado,
-        Mensaje=Mensaje,
-        FrecuenciaRepeticion=FrecuenciaRepeticion,
-        IntervaloRepeticion=IntervaloRepeticion,
-        DiasSemana=DiasSemana,
+        Canal=Cambios.Canal,
+        Enviado=Cambios.Enviado,
+        Mensaje=Cambios.Mensaje,
+        FrecuenciaRepeticion=Cambios.FrecuenciaRepeticion,
+        IntervaloRepeticion=Cambios.IntervaloRepeticion,
+        DiasSemana=dias_csv,
         Rol=Rol,
     )
     if Entidad is None:
-        raise HTTPException(status_code=400, detail="Recordatorio no encontrado o invalido (FechaHora en pasado)")
-    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
-    obj = Entidad.dict()
-    obj["FechaHora"] = _a_zona_iso(Entidad.FechaHora, tz)
-    obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
-    obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
-    return obj
+        raise HTTPException(status_code=400, detail="RecordatorioInvalido: no encontrado/eliminado o fecha/rol invalidos")
+    return Entidad
 
 
 @Router.delete("/recordatorios/{Id}")

@@ -11,7 +11,7 @@ from app.core.Database import IniciarTablas
 
 def CrearAplicacion() -> FastAPI:
     # Version alineada con el changelog (v0.14.x). Mantener sincronizada al liberar.
-    Aplicacion = FastAPI(title="MyPlanU API", version="0.14.1")
+    Aplicacion = FastAPI(title="MyPlanU API", version="0.15.0")
 
     # Asegurar creacion de tablas al construir la app (idempotente)
     IniciarTablas()

@@ -54,12 +54,12 @@ export async function processPending(http: import('axios').AxiosInstance): Promi
   for (const op of q) {
     try {
       if (op.entity === 'Meta' && op.kind === 'create') {
-        const r = await http.post(`/metas?${toQuery(op.payload)}`);
+        const r = await http.post(`/metas`, op.payload); // JSON body
         const created = r.data;
         metas = metas.map(m => (m.Id === op.tempId ? created : m));
         ok++;
       } else if (op.entity === 'Meta' && op.kind === 'update') {
-        const r = await http.patch(`/metas/${op.targetId}?${toQuery(op.payload)}`);
+        const r = await http.patch(`/metas/${op.targetId}`, op.payload); // JSON body
         const updated = r.data;
         metas = metas.map(m => (m.Id === op.targetId ? { ...m, ...updated } : m));
         ok++;

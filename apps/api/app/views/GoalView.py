@@ -6,6 +6,7 @@ from sqlmodel import Session
 from app.core.Database import ObtenerSesion, IniciarTablas
 from app.services.UsuariosService import UsuariosService
 from app.services.MetasService import MetasService
+from app.schemas import MetaCrear, MetaActualizar, MetaRespuesta
 
 
 Router = APIRouter()
@@ -68,11 +69,17 @@ def ListarMetas(SesionBD: Session = Depends(ObtenerSesion)):
     return Metas.ListarMetas(SesionBD)
 
 
-@Router.post("/metas")
-def CrearMeta(PropietarioId: int, Titulo: str, TipoMeta: str, Descripcion: Optional[str] = None, SesionBD: Session = Depends(ObtenerSesion)):
-    Entidad = Metas.CrearMeta(SesionBD, PropietarioId=PropietarioId, Titulo=Titulo, TipoMeta=TipoMeta, Descripcion=Descripcion)
+@Router.post("/metas", response_model=MetaRespuesta, status_code=201)
+def CrearMeta(MetaIn: MetaCrear, SesionBD: Session = Depends(ObtenerSesion)):
+    Entidad = Metas.CrearMeta(
+        SesionBD,
+        PropietarioId=MetaIn.PropietarioId,
+        Titulo=MetaIn.Titulo,
+        TipoMeta=MetaIn.TipoMeta,
+        Descripcion=MetaIn.Descripcion,
+    )
     if Entidad is None:
-        raise HTTPException(status_code=400, detail="PropietarioId invalido")
+        raise HTTPException(status_code=400, detail="MetaInvalida: PropietarioId inexistente o usuario no existe")
     return Entidad
 
 
@@ -84,11 +91,17 @@ def ObtenerMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
     return Entidad
 
 
-@Router.patch("/metas/{Id}")
-def ActualizarMeta(Id: int, Titulo: Optional[str] = None, Descripcion: Optional[str] = None, TipoMeta: Optional[str] = None, SesionBD: Session = Depends(ObtenerSesion)):
-    Entidad = Metas.ActualizarMeta(SesionBD, Id, Titulo=Titulo, Descripcion=Descripcion, TipoMeta=TipoMeta)
+@Router.patch("/metas/{Id}", response_model=MetaRespuesta)
+def ActualizarMeta(Id: int, Cambios: MetaActualizar, SesionBD: Session = Depends(ObtenerSesion)):
+    Entidad = Metas.ActualizarMeta(
+        SesionBD,
+        Id,
+        Titulo=Cambios.Titulo,
+        Descripcion=Cambios.Descripcion,
+        TipoMeta=Cambios.TipoMeta,
+    )
     if Entidad is None:
-        raise HTTPException(status_code=404, detail="Meta no encontrada")
+        raise HTTPException(status_code=404, detail="MetaInvalida: no encontrada o eliminada")
     return Entidad
 
 
@@ -96,7 +109,7 @@ def ActualizarMeta(Id: int, Titulo: Optional[str] = None, Descripcion: Optional[
 def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
     Exito = Metas.EliminarMeta(SesionBD, Id)
     if not Exito:
-        raise HTTPException(status_code=404, detail="Meta no encontrada")
+        raise HTTPException(status_code=404, detail="MetaInvalida: no encontrada o ya eliminada")
     return {"ok": True}
 
 
@@ -104,5 +117,5 @@ def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
 def RecuperarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
     Entidad = Metas.RecuperarMeta(SesionBD, Id)
     if Entidad is None:
-        raise HTTPException(status_code=400, detail="No se puede recuperar (meta inexistente)")
+        raise HTTPException(status_code=400, detail="MetaInvalida: no se puede recuperar (inexistente o activa)")
     return Entidad

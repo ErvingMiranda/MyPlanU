@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.14.1
+MyPlanU v0.15.0 (en desarrollo)
 =================
 
 Descripcion
@@ -258,6 +258,91 @@ v0.14.1 (Fixes y coherencia)
   - `PrincipalScreen` ahora usa `services/goals.listGoals()` (cache + cola offline) en lugar de `ClienteApi.ObtenerMetas` asegurando coherencia con la funcionalidad offline de v0.14.0.
 - Documentación:
   - Encabezado actualizado a `MyPlanU v0.14.1` y sección de fixes añadida.
+
+v0.15.0 (JSON bodies y contratos unificados) [EN DESARROLLO]
+- Backend:
+  - Introducidos modelos Pydantic (`schemas.py`) para request/response: MetaCrear/Actualizar/Respuesta, EventoCrear/Actualizar/Respuesta, RecordatorioCrear/Actualizar/Respuesta.
+  - Endpoints POST/PATCH de `/metas`, `/eventos` y `/recordatorios` ahora aceptan cuerpos JSON en lugar de query params.
+  - Campos de repetición (`FrecuenciaRepeticion`, `IntervaloRepeticion`, `DiasSemana`) se envían en objeto `Repeticion`. `DiasSemana` se recibe como lista (ej. `["Lun","Mie"]`) y se almacena como CSV interno.
+  - Estandarización de mensajes de error: patrones `MetaInvalida: ...`, `EventoInvalido: ...`, `RecordatorioInvalido: ...`.
+- Móvil:
+  - Cliente `ClienteApi` migrado a POST/PATCH JSON para metas, eventos y recordatorios (incluye repetición y zonas horarias en body).
+  - Servicios `services/goals` actualizados a JSON y cola offline (`offline.ts`) procesando create/update de metas con body JSON.
+- Migración / Breaking Changes:
+  - Antes: `POST /metas?PropietarioId=1&Titulo=...&TipoMeta=...` → Ahora: `POST /metas` con JSON.
+  - Antes: `POST /eventos?...Inicio=...&Fin=...` → Ahora: `POST /eventos` con JSON (incluye `Repeticion`).
+  - Antes: `POST /recordatorios?...` → Ahora: `POST /recordatorios` con JSON.
+  - Cualquier cliente que dependiera de query strings para crear/actualizar debe actualizarse.
+- TODO restante antes de cerrar v0.15.0:
+  - Revisar roles/permisos (fuera de alcance inmediato). 
+  - Revisar consistencia de conversion de zonas (documentado, funcional actual).
+
+Ejemplos cURL (nuevos contratos JSON)
+-------------------------------------
+Crear Meta:
+```bash
+curl -X POST http://localhost:8000/metas \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "PropietarioId": 1,
+    "Titulo": "Estudiar Algebra",
+    "TipoMeta": "Academica",
+    "Descripcion": "Repasar capitulos 1-3"
+  }'
+```
+
+Actualizar Meta (solo titulo):
+```bash
+curl -X PATCH http://localhost:8000/metas/10 \
+  -H 'Content-Type: application/json' \
+  -d '{ "Titulo": "Estudiar Algebra II" }'
+```
+
+Crear Evento con repetición semanal (Lunes y Miercoles):
+```bash
+curl -X POST http://localhost:8000/eventos \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "MetaId": 10,
+    "PropietarioId": 1,
+    "Titulo": "Sesion de estudio",
+    "Inicio": "2025-09-25T14:00:00",
+    "Fin": "2025-09-25T15:00:00",
+    "Repeticion": { "Frecuencia": "Semanal", "Intervalo": 1, "DiasSemana": ["Lun","Mie"] },
+    "ZonaHorariaEntrada": "America/Mexico_City"
+  }'
+```
+
+Actualizar Evento (cambiar horario):
+```bash
+curl -X PATCH http://localhost:8000/eventos/55 \
+  -H 'Content-Type: application/json' \
+  -d '{ "Inicio": "2025-09-26T14:00:00", "Fin": "2025-09-26T15:30:00" }'
+```
+
+Crear Recordatorio:
+```bash
+curl -X POST http://localhost:8000/recordatorios \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "EventoId": 55,
+    "FechaHora": "2025-09-26T13:50:00",
+    "Canal": "Local",
+    "Mensaje": "Preparar cuaderno",
+    "ZonaHorariaEntrada": "America/Mexico_City"
+  }'
+```
+
+Actualizar Recordatorio (mensaje):
+```bash
+curl -X PATCH http://localhost:8000/recordatorios/77 \
+  -H 'Content-Type: application/json' \
+  -d '{ "Mensaje": "Recordar materiales" }'
+```
+
+Notas sobre Zonas Horarias:
+- `ZonaHorariaEntrada`: interpreta campos de fecha/hora del body (naive) en esa zona y los persiste en UTC.
+- `ZonaHoraria`: controla la zona en la que se devuelven las fechas (si no se pasa, se usa la del `UsuarioId` o UTC).
 
 TODOs siguientes (planeados)
 ----------------------------
