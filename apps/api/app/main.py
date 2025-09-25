@@ -1,5 +1,14 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except Exception:
+    pass
 
 from app.views.HealthView import Router as SaludRouter, RouterHealth as HealthRouter
 from app.views.GoalView import Router as MetasRouter
@@ -8,15 +17,21 @@ from app.views.PapeleraView import Router as PapeleraRouter
 from app.core.Database import IniciarTablas
 
 
+APP_VERSION = os.getenv("APP_VERSION", "0.14.0")
+
+
 def CrearAplicacion() -> FastAPI:
-    Aplicacion = FastAPI(title="MyPlanU API", version="0.2.0")
+    Aplicacion = FastAPI(title="MyPlanU API", version=APP_VERSION)
 
     # Asegurar creacion de tablas al construir la app (idempotente)
     IniciarTablas()
 
+    origins_env = os.getenv("CORS_ALLOW_ORIGINS", "")
+    allow_origins = [o.strip() for o in origins_env.split(",") if o.strip()] or ["*"]
+
     Aplicacion.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allow_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -79,7 +79,11 @@ export async function ObtenerRecordatorios(UsuarioId?: number): Promise<Recordat
   if (UsuarioId) params.append('UsuarioId', String(UsuarioId));
   if (zona) params.append('ZonaHoraria', zona);
   const q = params.toString();
-  return fetchJson<Recordatorio>(`${ApiUrl}/recordatorios${q ? `?${q}` : ''}` as any, undefined, 'Error al cargar recordatorios') as any;
+  return fetchJson<Recordatorio[]>(
+    `${ApiUrl}/recordatorios${q ? `?${q}` : ''}`,
+    undefined,
+    'Error al cargar recordatorios',
+  );
 }
 
 export async function ObtenerRecordatoriosProximos(dias = 7, UsuarioId?: number): Promise<Recordatorio[]> {
