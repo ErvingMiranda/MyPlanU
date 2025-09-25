@@ -35,25 +35,46 @@ function TabsPrincipales(): React.ReactElement {
   );
 }
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TOKEN_KEY, clearAuthToken } from './src/api/http';
+
 export default function AplicacionMovil(): React.ReactElement {
+  const [checking, setChecking] = React.useState(true);
+  const [authed, setAuthed] = React.useState(false);
   // install interceptors once
   React.useEffect(() => {
     installAxiosInterceptors(http);
     // try to process pending offline queue on startup
     processPending(http).catch(() => {});
+    (async () => {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      setAuthed(!!token);
+      setChecking(false);
+    })();
   }, []);
+  const onLogout = React.useCallback(async () => {
+    await clearAuthToken();
+    setAuthed(false);
+  }, []);
+  const onLoggedIn = React.useCallback(() => setAuthed(true), []);
   return (
     <QueryClientProvider client={Cliente}>
       <NavigationContainer>
-        <Stack.Navigator>
-          <Stack.Screen name="LoginRegistro" component={LoginRegistroScreen} options={{ title: 'Login/Registro' }} />
-          <Stack.Screen name="HomeTabs" component={TabsPrincipales} options={{ headerShown: false }} />
+        {checking ? null : (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!authed && (
+            <Stack.Screen name="LoginRegistro" component={LoginRegistroScreen} />
+          )}
+          {authed && (
+            <Stack.Screen name="HomeTabs" component={TabsPrincipales} />
+          )}
           <Stack.Screen name="DetalleMeta" component={DetalleMetaScreen} options={{ title: 'Detalle de Meta' }} />
           <Stack.Screen name="CrearEditarMeta" component={CrearEditarMetaScreen} options={{ title: 'Crear/Editar Meta' }} />
           <Stack.Screen name="ListaEventos" component={ListaEventosScreen} options={{ title: 'Eventos' }} />
           <Stack.Screen name="DetalleEvento" component={DetalleEventoScreen} options={{ title: 'Detalle de Evento' }} />
           <Stack.Screen name="CrearEditarEvento" component={CrearEditarEventoScreen} options={{ title: 'Crear/Editar Evento' }} />
         </Stack.Navigator>
+        )}
       </NavigationContainer>
       <Toast />
     </QueryClientProvider>

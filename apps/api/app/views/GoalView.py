@@ -7,6 +7,8 @@ from app.core.Database import ObtenerSesion, IniciarTablas
 from app.services.UsuariosService import UsuariosService
 from app.services.MetasService import MetasService
 from app.schemas import MetaCrear, MetaActualizar, MetaRespuesta
+from app.views.AuthView import get_current_user
+from app.models.Goal import Usuario
 
 
 Router = APIRouter()
@@ -25,6 +27,7 @@ def ListarUsuarios(SesionBD: Session = Depends(ObtenerSesion)):
     return Usuarios.Listar(SesionBD)
 
 
+# Nota: registro de usuarios se mueve a /auth/registro (este endpoint se mantiene para compatibilidad interna)
 @Router.post("/usuarios")
 def CrearUsuario(Correo: str, Nombre: str, SesionBD: Session = Depends(ObtenerSesion)):
     Entidad = Usuarios.Crear(SesionBD, Correo=Correo, Nombre=Nombre)
@@ -70,10 +73,11 @@ def ListarMetas(SesionBD: Session = Depends(ObtenerSesion)):
 
 
 @Router.post("/metas", response_model=MetaRespuesta, status_code=201)
-def CrearMeta(MetaIn: MetaCrear, SesionBD: Session = Depends(ObtenerSesion)):
+def CrearMeta(MetaIn: MetaCrear, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
+    # Forzar PropietarioId al usuario autenticado
     Entidad = Metas.CrearMeta(
         SesionBD,
-        PropietarioId=MetaIn.PropietarioId,
+        PropietarioId=UsuarioActual.Id,
         Titulo=MetaIn.Titulo,
         TipoMeta=MetaIn.TipoMeta,
         Descripcion=MetaIn.Descripcion,
@@ -92,7 +96,10 @@ def ObtenerMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
 
 
 @Router.patch("/metas/{Id}", response_model=MetaRespuesta)
-def ActualizarMeta(Id: int, Cambios: MetaActualizar, SesionBD: Session = Depends(ObtenerSesion)):
+def ActualizarMeta(Id: int, Cambios: MetaActualizar, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
+    EntidadExistente = Metas.Obtener(SesionBD, Id)
+    if not EntidadExistente or EntidadExistente.PropietarioId != UsuarioActual.Id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     Entidad = Metas.ActualizarMeta(
         SesionBD,
         Id,
@@ -106,7 +113,10 @@ def ActualizarMeta(Id: int, Cambios: MetaActualizar, SesionBD: Session = Depends
 
 
 @Router.delete("/metas/{Id}")
-def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
+def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
+    EntidadExistente = Metas.Obtener(SesionBD, Id)
+    if not EntidadExistente or EntidadExistente.PropietarioId != UsuarioActual.Id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     Exito = Metas.EliminarMeta(SesionBD, Id)
     if not Exito:
         raise HTTPException(status_code=404, detail="MetaInvalida: no encontrada o ya eliminada")
@@ -114,7 +124,10 @@ def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
 
 
 @Router.post("/metas/{Id}/recuperar")
-def RecuperarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
+def RecuperarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
+    EntidadExistente = Metas.Obtener(SesionBD, Id)
+    if not EntidadExistente or EntidadExistente.PropietarioId != UsuarioActual.Id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     Entidad = Metas.RecuperarMeta(SesionBD, Id)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="MetaInvalida: no se puede recuperar (inexistente o activa)")

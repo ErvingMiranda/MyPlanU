@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActualizarUsuario } from '../api/ClienteApi';
 import { EstablecerZonaHoraria, ObtenerZonaHoraria } from '../userPrefs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { http, ping } from '../api/http';
+import { http, ping, clearAuthToken } from '../api/http';
 import { showError, showSuccess, showInfo, showRetry } from '../ui/toast';
 import { logEvent } from '../telemetry';
 import { processPending } from '../offline';
@@ -147,6 +147,12 @@ export default function ConfiguracionScreen(): React.ReactElement {
           }
         }} />
   <Button title="Cancelar" onPress={() => navigation.navigate('HomeTabs')} />
+      </View>
+      <View style={{ marginTop: 24 }}>
+        <Button title="Cerrar Sesión" color="#b00" onPress={async () => {
+          await clearAuthToken();
+          navigation.reset({ index: 0, routes: [{ name: 'LoginRegistro' }] });
+        }} />
       </View>
     </View>
   );

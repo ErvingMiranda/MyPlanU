@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.15.1 (en desarrollo)
+MyPlanU v0.16.0 (en desarrollo)
 =================
 
 Descripcion
@@ -419,3 +419,48 @@ Buenas prácticas cliente:
 - Mostrar `detail` directamente en toasts si inicia con `<Algo>Invalido:` recortando el prefijo opcionalmente.
 - Reintentos automáticos sólo para errores de red (timeout, offline) y no para 400/409.
 - Mapear 404 a un estado de "Recurso eliminado o inexistente" y ofrecer navegación atrás.
+
+v0.16.0 (Autenticación JWT básica)
+- Backend:
+  - Nuevos endpoints `/auth/registro` y `/auth/login`.
+  - Registro guarda contraseña hasheada (bcrypt via passlib) y devuelve token JWT.
+  - Login valida credenciales y entrega `{ access_token, token_type="bearer" }`.
+  - Dependencia `get_current_user` protege `/metas`, `/eventos`, `/recordatorios` y `/papelera` (401 si token inválido / ausente, 403 si acceso a recurso de otro usuario según reglas actuales de propietario).
+  - Campo `ContrasenaHash` agregado a `Usuario` (no se retorna en respuestas).
+- Móvil:
+  - Pantalla `LoginRegistroScreen` con modos registro / login.
+  - Token persistido en AsyncStorage y agregado en header `Authorization: Bearer <token>` por interceptor Axios.
+  - Botón "Cerrar Sesión" en Configuración que limpia token y redirige a pantalla de login.
+  - Navegación condicionada al estado de autenticación (si no hay token → login, si hay token → tabs principales).
+- Seguridad / Notas:
+  - SECRET_KEY y ACCESS_TOKEN_EXPIRE_MINUTES configurables por variables de entorno (fallback dev inseguros si no se definen).
+  - Recomendado rotar secret y mover a almacén seguro en despliegues productivos.
+  - Próximos pasos sugeridos: refresh tokens, revocación, roles/granularidad de permisos.
+
+Ejemplos cURL autenticación
+---------------------------
+Registro (dev):
+```bash
+curl -X POST http://localhost:8000/auth/registro \
+  -H 'Content-Type: application/json' \
+  -d '{"Correo":"demo@example.com","Nombre":"Demo","Contrasena":"demo123"}'
+```
+
+Login:
+```bash
+curl -X POST http://localhost:8000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"Correo":"demo@example.com","Contrasena":"demo123"}'
+```
+
+Usar token para listar metas:
+```bash
+TOKEN="$(curl -s -X POST http://localhost:8000/auth/login -H 'Content-Type: application/json' -d '{"Correo":"demo@example.com","Contrasena":"demo123"}' | jq -r .access_token)"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/metas
+```
+
+Errores esperados auth:
+- 401 Unauthorized: token ausente, expirado o inválido (`{"detail":"Token invalido"}` o `{"detail":"Credenciales invalidas"}`).
+- 403 Forbidden: acceso a recurso que no pertenece al usuario autenticado (`{"detail":"Forbidden"}`).
+- 409 Conflict: correo ya registrado en `/auth/registro`.
+

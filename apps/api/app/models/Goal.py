@@ -8,6 +8,7 @@ class Usuario(SQLModel, table=True):
     Id: Optional[int] = Field(default=None, primary_key=True)
     Correo: str = Field(index=True, unique=True)
     Nombre: str
+    ContrasenaHash: str = Field(default="")
     ZonaHoraria: str = Field(default='UTC')
     CreadoEn: datetime = Field(default_factory=datetime.utcnow)
     EliminadoEn: Optional[datetime] = None
