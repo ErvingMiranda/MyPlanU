@@ -13,6 +13,17 @@ class EventosService:
     def __init__(self) -> None:
         self.Usuarios = UsuariosService()
 
+    def _ListaADiasCSV(self, dias: Optional[List[str]]) -> Optional[str]:
+        if not dias:
+            return None
+        # Normalizar eliminando espacios y conservando orden
+        return ",".join([d.strip() for d in dias if d and d.strip()]) or None
+
+    def _DiasCSV_ALista(self, csv: Optional[str]) -> Optional[List[str]]:
+        if not csv:
+            return None
+        return [d.strip() for d in csv.split(',') if d.strip()]
+
     def CrearEvento(
         self,
         SesionBD: Session,
@@ -23,6 +34,9 @@ class EventosService:
         Fin: datetime,
         Descripcion: Optional[str] = None,
         Ubicacion: Optional[str] = None,
+        FrecuenciaRepeticion: Optional[str] = None,
+        IntervaloRepeticion: Optional[int] = None,
+        DiasSemana: Optional[List[str]] = None,
         Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Evento]:
         # Permisos: Dueno/Colaborador pueden crear; Lector no
@@ -30,6 +44,9 @@ class EventosService:
             return None
         # Validaciones: Inicio < Fin
         if not (Inicio < Fin):
+            return None
+        # Validacion repeticion
+        if FrecuenciaRepeticion and (IntervaloRepeticion is not None) and IntervaloRepeticion <= 0:
             return None
         # Validar existencia de Meta y Usuario (no eliminados)
         MetaEntidad = SesionBD.get(Meta, MetaId)
@@ -46,6 +63,9 @@ class EventosService:
             Inicio=Inicio,
             Fin=Fin,
             Ubicacion=Ubicacion,
+            FrecuenciaRepeticion=FrecuenciaRepeticion,
+            IntervaloRepeticion=IntervaloRepeticion,
+            DiasSemana=self._ListaADiasCSV(DiasSemana),
         )
         SesionBD.add(Entidad)
         SesionBD.commit()
@@ -189,6 +209,9 @@ class EventosService:
         Inicio: Optional[datetime] = None,
         Fin: Optional[datetime] = None,
         Ubicacion: Optional[str] = None,
+        FrecuenciaRepeticion: Optional[str] = None,
+        IntervaloRepeticion: Optional[int] = None,
+        DiasSemana: Optional[List[str]] = None,
         Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Evento]:
         # Permisos: Dueno/Colaborador pueden actualizar; Lector no
@@ -204,12 +227,21 @@ class EventosService:
         # Validar ventana de tiempo si ambos estan seteados o cambiaron
         if Entidad.Inicio >= Entidad.Fin:
             return None
+        if FrecuenciaRepeticion is not None:
+            if FrecuenciaRepeticion and (IntervaloRepeticion is not None) and IntervaloRepeticion <= 0:
+                return None
         if Titulo is not None:
             Entidad.Titulo = Titulo
         if Descripcion is not None:
             Entidad.Descripcion = Descripcion
         if Ubicacion is not None:
             Entidad.Ubicacion = Ubicacion
+        if FrecuenciaRepeticion is not None:
+            Entidad.FrecuenciaRepeticion = FrecuenciaRepeticion
+        if IntervaloRepeticion is not None:
+            Entidad.IntervaloRepeticion = IntervaloRepeticion
+        if DiasSemana is not None:
+            Entidad.DiasSemana = self._ListaADiasCSV(DiasSemana)
         Entidad.ActualizadoEn = datetime.utcnow()
         SesionBD.add(Entidad)
         SesionBD.commit()
@@ -255,6 +287,16 @@ class EventosService:
 
 
 class RecordatoriosService:
+    def _ListaADiasCSV(self, dias: Optional[List[str]]) -> Optional[str]:
+        if not dias:
+            return None
+        return ",".join([d.strip() for d in dias if d and d.strip()]) or None
+
+    def _DiasCSV_ALista(self, csv: Optional[str]) -> Optional[List[str]]:
+        if not csv:
+            return None
+        return [d.strip() for d in csv.split(',') if d.strip()]
+
     def CrearRecordatorio(
         self,
         SesionBD: Session,
@@ -264,7 +306,7 @@ class RecordatoriosService:
         Mensaje: Optional[str] = None,
         FrecuenciaRepeticion: Optional[str] = None,
         IntervaloRepeticion: Optional[int] = None,
-        DiasSemana: Optional[str] = None,
+        DiasSemana: Optional[List[str]] = None,
         Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Recordatorio]:
         # Permisos: Dueno/Colaborador pueden crear; Lector no
@@ -272,6 +314,8 @@ class RecordatoriosService:
             return None
         # No crear en el pasado
         if FechaHora < datetime.utcnow():
+            return None
+        if FrecuenciaRepeticion and (IntervaloRepeticion is not None) and IntervaloRepeticion <= 0:
             return None
         # Validar evento existe y no eliminado
         EventoEntidad = SesionBD.get(Evento, EventoId)
@@ -284,7 +328,7 @@ class RecordatoriosService:
             Mensaje=Mensaje,
             FrecuenciaRepeticion=FrecuenciaRepeticion,
             IntervaloRepeticion=IntervaloRepeticion,
-            DiasSemana=DiasSemana,
+            DiasSemana=self._ListaADiasCSV(DiasSemana),
         )
         SesionBD.add(Entidad)
         SesionBD.commit()
@@ -324,7 +368,7 @@ class RecordatoriosService:
         Mensaje: Optional[str] = None,
         FrecuenciaRepeticion: Optional[str] = None,
         IntervaloRepeticion: Optional[int] = None,
-        DiasSemana: Optional[str] = None,
+        DiasSemana: Optional[List[str]] = None,
         Rol: RolParticipante = RolParticipante.Dueno,
     ) -> Optional[Recordatorio]:
         # Permisos: Dueno/Colaborador pueden actualizar; Lector no
@@ -348,7 +392,9 @@ class RecordatoriosService:
         if IntervaloRepeticion is not None:
             Entidad.IntervaloRepeticion = IntervaloRepeticion
         if DiasSemana is not None:
-            Entidad.DiasSemana = DiasSemana
+            Entidad.DiasSemana = self._ListaADiasCSV(DiasSemana)
+        if Entidad.FrecuenciaRepeticion and Entidad.IntervaloRepeticion is not None and Entidad.IntervaloRepeticion <= 0:
+            return None
         # No hay actualizadoEn en recordatorio por requerimiento
         SesionBD.add(Entidad)
         SesionBD.commit()

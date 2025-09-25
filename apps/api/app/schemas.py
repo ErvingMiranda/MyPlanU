@@ -36,7 +36,7 @@ class EventoBase(BaseModel):
     Descripcion: Optional[str] = None
     Ubicacion: Optional[str] = None
     FrecuenciaRepeticion: Optional[str] = Field(None, regex=r"^(Diaria|Semanal|Mensual)$")
-    IntervaloRepeticion: Optional[int] = Field(None, ge=1)
+    IntervaloRepeticion: Optional[int] = None
     DiasSemana: Optional[List[str]] = None  # Se convertirá a CSV en modelo persistente
 
     @validator("Fin")
@@ -56,7 +56,7 @@ class EventoActualizar(BaseModel):
     Descripcion: Optional[str] = None
     Ubicacion: Optional[str] = None
     FrecuenciaRepeticion: Optional[str] = Field(None, regex=r"^(Diaria|Semanal|Mensual)$")
-    IntervaloRepeticion: Optional[int] = Field(None, ge=1)
+    IntervaloRepeticion: Optional[int] = None
     DiasSemana: Optional[List[str]] = None
 
     @validator("Fin")
@@ -75,7 +75,7 @@ class EventoRespuesta(BaseModel):
     Ubicacion: Optional[str]
     FrecuenciaRepeticion: Optional[str]
     IntervaloRepeticion: Optional[int]
-    DiasSemana: Optional[str]
+    DiasSemana: Optional[List[str]]
     CreadoEn: datetime
     ActualizadoEn: Optional[datetime]
     EliminadoEn: Optional[datetime]
@@ -90,7 +90,7 @@ class RecordatorioBase(BaseModel):
     Canal: str = Field(..., regex=r"^(Local|Push)$")
     Mensaje: Optional[str] = None
     FrecuenciaRepeticion: Optional[str] = Field(None, regex=r"^(Diaria|Semanal|Mensual)$")
-    IntervaloRepeticion: Optional[int] = Field(None, ge=1)
+    IntervaloRepeticion: Optional[int] = None
     DiasSemana: Optional[List[str]] = None
 
 class RecordatorioCrear(RecordatorioBase):
@@ -102,7 +102,7 @@ class RecordatorioActualizar(BaseModel):
     Mensaje: Optional[str] = None
     Enviado: Optional[bool] = None
     FrecuenciaRepeticion: Optional[str] = Field(None, regex=r"^(Diaria|Semanal|Mensual)$")
-    IntervaloRepeticion: Optional[int] = Field(None, ge=1)
+    IntervaloRepeticion: Optional[int] = None
     DiasSemana: Optional[List[str]] = None
 
 class RecordatorioRespuesta(BaseModel):
@@ -113,7 +113,7 @@ class RecordatorioRespuesta(BaseModel):
     Mensaje: Optional[str]
     FrecuenciaRepeticion: Optional[str]
     IntervaloRepeticion: Optional[int]
-    DiasSemana: Optional[str]
+    DiasSemana: Optional[List[str]]
     Enviado: bool
     CreadoEn: datetime
     EliminadoEn: Optional[datetime]

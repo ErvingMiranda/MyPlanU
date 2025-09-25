@@ -94,6 +94,9 @@ def ListarEventos(
     salida = []
     for ev in res:
         obj = ev.dict()
+        # Convertir DiasSemana CSV -> lista
+        if obj.get("DiasSemana"):
+            obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
         obj["Inicio"] = _a_zona_iso(ev.Inicio, tz)
         obj["Fin"] = _a_zona_iso(ev.Fin, tz)
         obj["CreadoEn"] = _a_zona_iso(ev.CreadoEn, tz)
@@ -142,10 +145,6 @@ def CrearEvento(
 ):
     ini_utc = _a_utc_naive(Datos.Inicio, ZonaHorariaEntrada)
     fin_utc = _a_utc_naive(Datos.Fin, ZonaHorariaEntrada)
-    # Convertir DiasSemana lista -> CSV
-    dias_csv = None
-    if Datos.DiasSemana:
-        dias_csv = ",".join(Datos.DiasSemana)
     Entidad = Eventos.CrearEvento(
         SesionBD,
         MetaId=Datos.MetaId,
@@ -155,18 +154,13 @@ def CrearEvento(
         Fin=fin_utc,
         Descripcion=Datos.Descripcion,
         Ubicacion=Datos.Ubicacion,
+        FrecuenciaRepeticion=Datos.FrecuenciaRepeticion,
+        IntervaloRepeticion=Datos.IntervaloRepeticion,
+        DiasSemana=Datos.DiasSemana,
         Rol=Rol,
     )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="EventoInvalido: Meta/Propietario inexistentes, rol no permitido o rango de tiempo")
-    # Asignar repeticion si procede
-    if Datos.FrecuenciaRepeticion:
-        Entidad.FrecuenciaRepeticion = Datos.FrecuenciaRepeticion
-        Entidad.IntervaloRepeticion = Datos.IntervaloRepeticion
-        Entidad.DiasSemana = dias_csv
-        SesionBD.add(Entidad)
-        SesionBD.commit()
-        SesionBD.refresh(Entidad)
     tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
     # Formateo manual manteniendo response_model casting
     Entidad.Inicio = Entidad.Inicio  # ya UTC naive
@@ -186,6 +180,8 @@ def ObtenerEvento(
         raise HTTPException(status_code=404, detail="Evento no encontrado")
     tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
     obj = Entidad.dict()
+    if obj.get("DiasSemana"):
+        obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
     obj["Inicio"] = _a_zona_iso(Entidad.Inicio, tz)
     obj["Fin"] = _a_zona_iso(Entidad.Fin, tz)
     obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
@@ -214,18 +210,13 @@ def ActualizarEvento(
         Inicio=ini_utc,
         Fin=fin_utc,
         Ubicacion=Cambios.Ubicacion,
+        FrecuenciaRepeticion=Cambios.FrecuenciaRepeticion,
+        IntervaloRepeticion=Cambios.IntervaloRepeticion,
+        DiasSemana=Cambios.DiasSemana,
         Rol=Rol,
     )
     if Entidad is None:
         raise HTTPException(status_code=400, detail="EventoInvalido: no encontrado, eliminado o rango de tiempo invalido")
-    # Actualizar repeticion si viene en Cambios
-    if Cambios.FrecuenciaRepeticion is not None:
-        Entidad.FrecuenciaRepeticion = Cambios.FrecuenciaRepeticion
-        Entidad.IntervaloRepeticion = Cambios.IntervaloRepeticion
-        Entidad.DiasSemana = ",".join(Cambios.DiasSemana) if Cambios.DiasSemana else None
-        SesionBD.add(Entidad)
-        SesionBD.commit()
-        SesionBD.refresh(Entidad)
     return Entidad
 
 
@@ -269,6 +260,8 @@ def ListarRecordatorios(
     salida = []
     for r in res:
         obj = r.dict()
+        if obj.get("DiasSemana"):
+            obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
         obj["FechaHora"] = _a_zona_iso(r.FechaHora, tz)
         obj["CreadoEn"] = _a_zona_iso(r.CreadoEn, tz)
         obj["EliminadoEn"] = _a_zona_iso(r.EliminadoEn, tz) if r.EliminadoEn else None
@@ -286,7 +279,6 @@ def CrearRecordatorio(
     SesionBD: Session = Depends(ObtenerSesion),
 ):
     fh_utc = _a_utc_naive(Datos.FechaHora, ZonaHorariaEntrada)
-    dias_csv = ",".join(Datos.DiasSemana) if Datos.DiasSemana else None
     Entidad = Recordatorios.CrearRecordatorio(
         SesionBD,
         EventoId=Datos.EventoId,
@@ -295,7 +287,7 @@ def CrearRecordatorio(
         Mensaje=Datos.Mensaje,
         FrecuenciaRepeticion=Datos.FrecuenciaRepeticion,
         IntervaloRepeticion=Datos.IntervaloRepeticion,
-        DiasSemana=dias_csv,
+        DiasSemana=Datos.DiasSemana,
         Rol=Rol,
     )
     if Entidad is None:
@@ -315,6 +307,8 @@ def ObtenerRecordatorio(
         raise HTTPException(status_code=404, detail="Recordatorio no encontrado")
     tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
     obj = Entidad.dict()
+    if obj.get("DiasSemana"):
+        obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
     obj["FechaHora"] = _a_zona_iso(Entidad.FechaHora, tz)
     obj["CreadoEn"] = _a_zona_iso(Entidad.CreadoEn, tz)
     obj["EliminadoEn"] = _a_zona_iso(Entidad.EliminadoEn, tz) if Entidad.EliminadoEn else None
@@ -332,7 +326,6 @@ def ActualizarRecordatorio(
     SesionBD: Session = Depends(ObtenerSesion),
 ):
     fh_utc = _a_utc_naive(Cambios.FechaHora, ZonaHorariaEntrada) if Cambios.FechaHora is not None else None
-    dias_csv = ",".join(Cambios.DiasSemana) if Cambios.DiasSemana else None
     Entidad = Recordatorios.ActualizarRecordatorio(
         SesionBD,
         Id,
@@ -342,7 +335,7 @@ def ActualizarRecordatorio(
         Mensaje=Cambios.Mensaje,
         FrecuenciaRepeticion=Cambios.FrecuenciaRepeticion,
         IntervaloRepeticion=Cambios.IntervaloRepeticion,
-        DiasSemana=dias_csv,
+        DiasSemana=Cambios.DiasSemana,
         Rol=Rol,
     )
     if Entidad is None:
@@ -390,6 +383,8 @@ def ListarRecordatoriosProximos(
     salida = []
     for r in res:
         obj = r.dict()
+        if obj.get("DiasSemana"):
+            obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
         obj["FechaHora"] = _a_zona_iso(r.FechaHora, tz)
         obj["CreadoEn"] = _a_zona_iso(r.CreadoEn, tz)
         obj["EliminadoEn"] = _a_zona_iso(r.EliminadoEn, tz) if r.EliminadoEn else None
