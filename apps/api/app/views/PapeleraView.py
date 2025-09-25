@@ -7,6 +7,7 @@ from sqlmodel import Session
 from app.core.Database import ObtenerSesion, IniciarTablas
 from app.services.MetasService import MetasService
 from app.services.EventosService import EventosService
+from app.services.RecordatoriosService import RecordatoriosService
 from app.services.UsuariosService import UsuariosService
 
 try:
@@ -17,6 +18,7 @@ except Exception:
 Router = APIRouter()
 Metas = MetasService()
 Eventos = EventosService()
+Recordatorios = RecordatoriosService()
 Usuarios = UsuariosService()
 
 @Router.on_event("startup")
@@ -129,7 +131,9 @@ def ListarRecordatoriosEliminados(
     desde_utc = _a_utc_naive(Desde, ZonaHorariaEntrada) if Desde else None
     hasta_utc = _a_utc_naive(Hasta, ZonaHorariaEntrada) if Hasta else None
     tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
-    res = Eventos.ListarRecordatoriosEliminados(SesionBD, EventoId=EventoId, Desde=desde_utc, Hasta=hasta_utc)
+    res = Recordatorios.ListarRecordatoriosEliminados(
+        SesionBD, EventoId=EventoId, Desde=desde_utc, Hasta=hasta_utc
+    )
     salida = []
     for r in res:
         obj = r.dict()

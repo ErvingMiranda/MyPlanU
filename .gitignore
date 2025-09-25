@@ -1,50 +1,51 @@
-# General
-.DS_Store
-**/.DS_Store
-*.log
-*.tmp
-tmp/
-temp/
-.env
-.env.*
-.venv
-venv/
-ENV/
-.idea/
-.vscode/
-dist/
-build/
-coverage/
-*.db
-*.sqlite
-*.sqlite3
-apps/api/datos.db
-
-# Python
+# Python / FastAPI
 __pycache__/
 *.py[cod]
-*.so
+*.pyc
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .tox/
 .coverage*
+.coverage
 .hypothesis/
+.venv/
+.env
+.env.*
+apps/api/.env*
 
-# Node / React Native / Expo
+# SQLite runtime
+*.db
+*.sqlite
+*.sqlite3
+apps/api/datos.db
+apps/api/**/datos.db
+
+# Node / Expo / React Native
 node_modules/
+apps/mobile/node_modules/
 *.expo/
 .expo/
 .expo-shared/
+apps/mobile/.expo/
+apps/mobile/.env*
 web-build/
-*.keystore
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+dist/
+build/
 
-# OS/Editor
+# Logs / temp
+*.log
+*.tmp
+tmp/
+temp/
+coverage/
+
+# Editor / OS artifacts
+.idea/
+.vscode/
+ENV/
+.DS_Store
+**/.DS_Store
 Thumbs.db
 ehthumbs.db
 *.swp
