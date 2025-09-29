@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.16.0 (en desarrollo)
+MyPlanU v0.16.1 (en desarrollo)
 =================
 
 Descripcion
@@ -350,6 +350,8 @@ TODOs siguientes (planeados)
 - Cascada logica: al eliminar Meta, propagar a Eventos y Recordatorios.
 - Persistencia real en Crear/Editar Meta desde movil.
 - Manejo de autenticacion real en Login/Registro.
+- Organización del código: revisar espaciados, consistencia de formato y separación visual para mejorar legibilidad.
+- IP / conectividad móvil: garantizar acceso desde dispositivo físico (Expo LAN) con autenticación y servicios funcionando sobre la IP configurada.
 
 v0.15.1 (Hardening repetición y pruebas)
 - Backend:
@@ -463,4 +465,13 @@ Errores esperados auth:
 - 401 Unauthorized: token ausente, expirado o inválido (`{"detail":"Token invalido"}` o `{"detail":"Credenciales invalidas"}`).
 - 403 Forbidden: acceso a recurso que no pertenece al usuario autenticado (`{"detail":"Forbidden"}`).
 - 409 Conflict: correo ya registrado en `/auth/registro`.
+
+v0.16.1 (Ajustes post-autenticación)
+- Backend y pruebas:
+  - Nuevo helper `ObtenerEngine()` expone el engine de SQLModel para reutilizarlo en pruebas y utilidades.
+  - Las pruebas de eventos y recordatorios ahora usan un helper de autenticación que crea usuario y token antes de invocar los endpoints protegidos.
+- Móvil:
+  - `fetchJson()` incluye automáticamente el header `Authorization` cuando hay token almacenado, alineando las llamadas `fetch` con el cliente Axios.
+  - Pantalla Crear/Editar Meta reemplaza el campo libre de tipo por un selector accesible entre "Individual" y "Colectiva".
+  - `services/goals` normaliza `TipoMeta`, limita los valores permitidos y reutiliza la constante `GOAL_TYPES` en UI y capa offline.
 
