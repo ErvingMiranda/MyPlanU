@@ -2,6 +2,13 @@ import { http } from '../api/http';
 import { mapHttpError, type HttpError } from '../api/errors';
 import { getCachedMetas, setCachedMetas, enqueue } from '../offline';
 
+export const GOAL_TYPES = ['Individual', 'Colectiva'] as const;
+export type GoalType = typeof GOAL_TYPES[number];
+
+export function normalizeGoalType(tipo?: string | null): GoalType {
+  return tipo === 'Colectiva' ? 'Colectiva' : 'Individual';
+}
+
 export type Goal = {
   Id: number;
   PropietarioId: number;
@@ -16,7 +23,7 @@ export type Goal = {
 export type CreateGoal = {
   PropietarioId: number;
   Titulo: string;
-  TipoMeta: string;
+  TipoMeta: GoalType;
   Descripcion?: string | null;
 };
 
@@ -48,7 +55,8 @@ export async function getGoal(Id: number): Promise<Goal> {
 
 export async function createGoal(datos: CreateGoal): Promise<Goal> {
   try {
-    const r = await http.post(`/metas`, datos); // JSON body
+    const payload = { ...datos, TipoMeta: normalizeGoalType(datos.TipoMeta) };
+    const r = await http.post(`/metas`, payload); // JSON body
     return r.data as Goal;
   } catch (e) {
     const err = normalizeError(e);
@@ -56,10 +64,10 @@ export async function createGoal(datos: CreateGoal): Promise<Goal> {
       // optimistic local create with temp Id (negative)
       const tempId = -Math.floor(Math.random() * 1_000_000) - 1;
       const now = new Date().toISOString();
-      const optimistic: Goal = { Id: tempId, PropietarioId: datos.PropietarioId, Titulo: datos.Titulo, TipoMeta: datos.TipoMeta, Descripcion: datos.Descripcion ?? null, CreadoEn: now } as any;
+      const optimistic: Goal = { Id: tempId, PropietarioId: datos.PropietarioId, Titulo: datos.Titulo, TipoMeta: payload.TipoMeta, Descripcion: datos.Descripcion ?? null, CreadoEn: now } as any;
       const cached = (await getCachedMetas()) ?? [];
       await setCachedMetas([optimistic as any, ...cached]);
-      await enqueue({ kind: 'create', entity: 'Meta', tempId, payload: datos });
+      await enqueue({ kind: 'create', entity: 'Meta', tempId, payload });
       return optimistic;
     }
     throw err;
@@ -67,16 +75,17 @@ export async function createGoal(datos: CreateGoal): Promise<Goal> {
 }
 
 export async function updateGoal(Id: number, cambios: UpdateGoal): Promise<Goal> {
-  try { const r = await http.patch(`/metas/${Id}`, cambios); return r.data as Goal; } catch (e) {
+  const payload = cambios.TipoMeta ? { ...cambios, TipoMeta: normalizeGoalType(cambios.TipoMeta) } : cambios;
+  try { const r = await http.patch(`/metas/${Id}`, payload); return r.data as Goal; } catch (e) {
     const err = normalizeError(e);
     if (err.code === 'NETWORK' || err.code === 'TIMEOUT') {
       const cached = (await getCachedMetas()) ?? [];
       const idx = cached.findIndex(m => m.Id === Id);
       if (idx >= 0) {
-        const updated = { ...cached[idx], ...cambios, ActualizadoEn: new Date().toISOString() } as any;
+        const updated = { ...cached[idx], ...payload, ActualizadoEn: new Date().toISOString() } as any;
         cached[idx] = updated;
         await setCachedMetas(cached as any);
-        await enqueue({ kind: 'update', entity: 'Meta', targetId: Id, payload: cambios });
+        await enqueue({ kind: 'update', entity: 'Meta', targetId: Id, payload });
         return updated;
       }
     }

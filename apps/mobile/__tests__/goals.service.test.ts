@@ -12,7 +12,7 @@ describe('goals service', () => {
   });
 
   it('lists goals successfully', async () => {
-    mock.onGet('/metas').reply(200, [{ Id: 1, PropietarioId: 1, Titulo: 'A', TipoMeta: 'OTRA' }]);
+    mock.onGet('/metas').reply(200, [{ Id: 1, PropietarioId: 1, Titulo: 'A', TipoMeta: 'Individual' }]);
     const metas = await listGoals();
     expect(metas.length).toBe(1);
     expect(metas[0].Titulo).toBe('A');

@@ -11,6 +11,6 @@ export const handlers = [
       { Id: 1, EventoId: 99, FechaHora: new Date(Date.now() + 3600_000).toISOString(), Canal: 'Local', Enviado: false, CreadoEn: new Date().toISOString() }
     ]);
   }),
-  http.post(`${API}/metas/:id/recuperar`, () => HttpResponse.json({ Id: 42, PropietarioId: 1, Titulo: 'Meta', TipoMeta: 'OTRA', CreadoEn: new Date().toISOString() })),
+  http.post(`${API}/metas/:id/recuperar`, () => HttpResponse.json({ Id: 42, PropietarioId: 1, Titulo: 'Meta', TipoMeta: 'Individual', CreadoEn: new Date().toISOString() })),
   http.post(`${API}/eventos/:id/recuperar`, () => HttpResponse.json({ Id: 77, MetaId: 42, PropietarioId: 1, Titulo: 'Ev', Inicio: new Date().toISOString(), Fin: new Date(Date.now()+3600_000).toISOString(), CreadoEn: new Date().toISOString() })),
 ];
