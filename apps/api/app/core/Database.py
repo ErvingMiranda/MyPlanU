@@ -7,6 +7,10 @@ URLBaseDatos = "sqlite:///./datos.db"
 Motor = create_engine(URLBaseDatos, echo=False, connect_args={"check_same_thread": False})
 
 
+def ObtenerEngine():
+    return Motor
+
+
 def IniciarTablas() -> None:
     # Importar modelos para registrar metadata antes de crear tablas
     from app.models import Goal  # noqa: F401  # Usuario, Meta
