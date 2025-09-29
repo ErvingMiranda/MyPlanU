@@ -1,5 +1,5 @@
 import type { AxiosError } from 'axios';
-import { getNetworkErrorMessage } from './http';
+import { getAuthToken, getNetworkErrorMessage } from './http';
 
 export type HttpError = {
   code: number | 'NETWORK' | 'TIMEOUT';
@@ -51,7 +51,10 @@ export function installAxiosInterceptors(axiosInstance: import('axios').AxiosIns
 // Helper for fetch()-based clients to normalize errors
 export async function fetchJson<T>(url: string, options: RequestInit | undefined, defaultMessage: string): Promise<T> {
   try {
-    const res = await fetch(url, options);
+    const token = await getAuthToken();
+    const headers = new Headers(options?.headers as HeadersInit | undefined);
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    const res = await fetch(url, { ...(options ?? {}), headers });
     if (!res.ok) {
       let detail: string | undefined;
       try {
