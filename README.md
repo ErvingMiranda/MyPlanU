@@ -475,3 +475,24 @@ v0.16.1 (Ajustes post-autenticación)
   - Pantalla Crear/Editar Meta reemplaza el campo libre de tipo por un selector accesible entre "Individual" y "Colectiva".
   - `services/goals` normaliza `TipoMeta`, limita los valores permitidos y reutiliza la constante `GOAL_TYPES` en UI y capa offline.
 
+Próximas versiones planificadas
+-------------------------------
+
+v0.17.0 (Permisos y cascadas básicas)
+- Reglas de permiso aplicadas en Servicios de Metas/Eventos/Recordatorios con validación por rol.
+- Comportamiento de cascada definido para borrar Metas y Usuarios, incluyendo validación de Metas colectivas.
+- Ajustes en app móvil para mostrar errores de autorización y estados de cascada.
+- Documentación y datos de prueba alineados con los roles.
+
+v0.18.0 (Auditoría y notificaciones)
+- Registro de acciones de recuperación en bitácora y notificaciones al eliminar eventos.
+- Correcciones de zona horaria en API.
+- App móvil consumiendo participantes reales y mostrando alertas locales.
+- Nuevas guías de monitoreo y pruebas automatizadas asociadas.
+
+v0.19.0 (Experiencia móvil y sincronización)
+- Endpoints complementarios para la cola offline en backend.
+- Integración de Expo Notifications y sincronización offline ↔ online.
+- Garantizar conectividad desde dispositivos físicos y mejoras de formato/código.
+- Documentación de flujos offline y limpieza general.
+
