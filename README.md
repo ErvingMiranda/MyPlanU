@@ -195,42 +195,31 @@ v0.13.1
 - Movil:
   - Nueva pantalla "Papelera" con pestañas Metas/Eventos/Recordatorios. Permite ver EliminadoEn y recuperar cada item.
   - Manejo de errores al recuperar (muestra mensaje del backend cuando aplica, ej. dependencias no recuperadas).
-- Ejemplos rapidos (cURL):
-  - Metas eliminadas en la ultima semana, vistas en zona de Mexico City:
-    curl "http://localhost:8000/papelera/metas?Desde=$(date -Iseconds -u --date='-7 days')&ZonaHoraria=America/Mexico_City"
+
+# MyPlanU
+
+## MyPlanU v0.16.0 (en desarrollo)
   - Eventos eliminados de una meta especifica:
     curl "http://localhost:8000/papelera/eventos?MetaId=123"
-  - Recordatorios eliminados de un evento, interpretando el filtro de fecha de entrada en zona local:
-    curl "http://localhost:8000/papelera/recordatorios?EventoId=45&Desde=2025-01-01T00:00:00&ZonaHorariaEntrada=America/Bogota&ZonaHoraria=America/Bogota"
+## Descripción
+
+MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Este repositorio es un monorepo con backend (FastAPI + SQLModel) y app móvil (Expo + TypeScript), con convenciones en español y arquitectura MSV.
 
 v0.13.2
-- Base URL y healthcheck:
-  - Backend ahora expone tambien /health (alias de /salud) para checks de infraestructura.
   - Movil: nuevo cliente HTTP en `apps/mobile/src/api/http.ts` (Axios) que lee API_BASE_URL y EXPO_PUBLIC_API_URL.
   - Agrega `apps/mobile/.env.example` con API_BASE_URL. En simulador usa 127.0.0.1; en dispositivo fisico, usa la IP LAN de tu maquina (ej. http://192.168.1.10:8000).
-  - Funcion `ping()` consulta /health y cae a /salud. Reemplazar mensajes genericos de red por un toast con sugerencia de revisar URL o conectividad.
 
-v0.13.6
 - Pantalla Configuracion con conectividad:
   - Nuevo botón “Probar conexión” que llama ping() y muestra estado.
-  - Campo editable de API_BASE_URL (solo dev) que se persiste en almacenamiento y actualiza baseURL de Axios en caliente.
-
-v0.13.7
-- Manejo de errores unificado y toasts:
   - Cliente Axios ahora instala interceptores (solo log en dev) y se centraliza el mapeo de errores en `src/api/errors.ts`.
   - Reemplazo de Alerts por toasts en pantallas de Configuración y Crear/Editar Meta para feedback no intrusivo.
   - Nuevos helpers `showSuccess/showError/showInfo` y provider global `<Toast />` integrados.
 
 Pruebas (app móvil)
--------------------
-- Stack: Jest + jest-expo.
-- Ejecutar pruebas en `apps/mobile`:
-
 ```bash
 cd apps/mobile
-npm test
 ```
-
+1. Crear y activar venv, instalar requirements, correr uvicorn y probar `/salud`:
 - Cobertura básica incluida:
   - Servicios de metas (Axios) con escenarios de éxito, 404 y timeout (axios-mock-adapter).
   - Cliente fetch de recordatorios/metas con mocks de fetch manuales (éxito y 409).
@@ -244,7 +233,7 @@ v0.13.9
 v0.14.0
 - Offline mínimo (metas):
   - Cache local de la lista de metas y cola de operaciones (crear/actualizar) usando AsyncStorage.
-  - En red caída: la lista usa el cache y crear/editar operan de forma optimista y se encolan para sincronizar luego.
+1. Instalar dependencias y arrancar Expo:
   - Al iniciar la app se intenta procesar la cola automáticamente.
   - Nuevo botón en Configuración: “Reintentar sync offline” para forzar la sincronización manual y ver resultado por toasts.
 
@@ -253,15 +242,16 @@ v0.14.1 (Fixes y coherencia)
   - Version de la API alineada al changelog (FastAPI `version=0.14.1`).
   - Parametrización de CORS mediante variable de entorno `MYPLANU_CORS_ORIGINS` (lista separada por comas, fallback `*`).
   - Endpoint `/papelera/recordatorios` corrigió uso errado de `EventosService` y ahora emplea `RecordatoriosService.ListarRecordatoriosEliminados`.
-  - Comentario y refuerzo en `.gitignore` para excluir bases SQLite (`*.db`, `apps/api/datos.db`).
-- Móvil:
+Si el emulador/dispositivo no accede a localhost, configura la URL del backend en el cliente móvil usando la variable de entorno de Expo:
   - `PrincipalScreen` ahora usa `services/goals.listGoals()` (cache + cola offline) en lugar de `ClienteApi.ObtenerMetas` asegurando coherencia con la funcionalidad offline de v0.14.0.
 - Documentación:
   - Encabezado actualizado a `MyPlanU v0.14.1` y sección de fixes añadida.
 
 v0.15.0 (JSON bodies y contratos unificados)
 - Backend:
-  - Introducidos modelos Pydantic (`schemas.py`) para request/response: MetaCrear/Actualizar/Respuesta, EventoCrear/Actualizar/Respuesta, RecordatorioCrear/Actualizar/Respuesta.
+---
+
+## Changelog por versión
   - Endpoints POST/PATCH de `/metas`, `/eventos` y `/recordatorios` ahora aceptan cuerpos JSON en lugar de query params.
   - Campos de repetición (`FrecuenciaRepeticion`, `IntervaloRepeticion`, `DiasSemana`) se envían en objeto `Repeticion`. `DiasSemana` se recibe como lista (ej. `["Lun","Mie"]`) y se almacena como CSV interno.
   - Estandarización de mensajes de error: patrones `MetaInvalida: ...`, `EventoInvalido: ...`, `RecordatorioInvalido: ...`.
@@ -283,24 +273,24 @@ Crear Meta:
 ```bash
 curl -X POST http://localhost:8000/metas \
   -H 'Content-Type: application/json' \
-  -d '{
-    "PropietarioId": 1,
+  ## Pruebas (app móvil)
+
+  - Stack: Jest + jest-expo.
     "Titulo": "Estudiar Algebra",
-    "TipoMeta": "Academica",
+   Ejecutar pruebas en `apps/mobile`:
     "Descripcion": "Repasar capitulos 1-3"
   }'
 ```
 
 Actualizar Meta (solo titulo):
 ```bash
-curl -X PATCH http://localhost:8000/metas/10 \
   -H 'Content-Type: application/json' \
   -d '{ "Titulo": "Estudiar Algebra II" }'
 ```
 
-Crear Evento con repetición semanal (Lunes y Miercoles):
+  ## Errores estandarizados (patrones y ejemplos)
 ```bash
-curl -X POST http://localhost:8000/eventos \
+  El backend expone mensajes de error consistentes en `detail` para facilitar el mapeo en el cliente. Formatos clave:
   -H 'Content-Type: application/json' \
   -d '{
     "MetaId": 10,
@@ -349,9 +339,12 @@ TODOs siguientes (planeados)
 - Endpoints batch para la cola offline (v0.19.0).
 - Integrar Expo Notifications con la sincronización offline/online.
 - Documentar y limpiar los flujos offline (formato y organización de código).
+- Permisos por rol: Dueno, Colaborador, Lector (validación en Services).
 
 v0.15.1 (Hardening repetición y pruebas)
-- Backend:
+  ## Ejemplos cURL autenticación
+
+  Registro (dev):
   - `DiasSemana` ahora se expone como lista en todas las respuestas (antes CSV). La conversión lista↔CSV se centralizó en Services.
   - Validación de `IntervaloRepeticion` movida a Services para emitir `EventoInvalido` / `RecordatorioInvalido` (400) en lugar de 422 de esquema.
   - Respuestas de eventos/recordatorios normalizan repetición y mantienen patrones de error estandarizados.
@@ -372,9 +365,6 @@ El backend expone mensajes de error consistentes en `detail` para facilitar el m
 
 1. Validaciones de dominio (400):
    - `MetaInvalida: <motivo>`
-   - `EventoInvalido: <motivo>`
-   - `RecordatorioInvalido: <motivo>`
-   Ejemplos:
 ```json
 {
   "detail": "EventoInvalido: IntervaloRepeticion debe ser > 0"
@@ -463,6 +453,7 @@ Errores esperados auth:
 - 403 Forbidden: acceso a recurso que no pertenece al usuario autenticado (`{"detail":"Forbidden"}`).
 - 409 Conflict: correo ya registrado en `/auth/registro`.
 
+<<<<<<< HEAD
 v0.16.1 (Ajustes post-autenticación)
 - Backend y pruebas:
   - Nuevo helper `ObtenerEngine()` expone el engine de SQLModel para reutilizarlo en pruebas y utilidades.
@@ -499,4 +490,15 @@ v0.19.0 (Experiencia móvil y sincronización)
 - Integración de Expo Notifications y sincronización offline ↔ online.
 - Garantizar conectividad desde dispositivos físicos y mejoras de formato/código.
 - Documentación de flujos offline y limpieza general.
+=======
+v0.19.0 (propuesta, en progreso)
+- Backend:
+  - Nuevos endpoints batch: `POST /sync/metas` y `POST /sync/eventos` para procesar colas offline con operaciones `create`/`update`.
+  - Contrato: `{ operations: [{ kind, tempId?, targetId?, data }], sequential: true, continueOnError: true }`.
+  - Respuesta: `{ results: [{ index, kind, ok, id?, tempId?, targetId?, error? }], mappings: { "-123": 45 } }`.
+  - `GET /sync/estado` devuelve información básica de estado del servidor para reconciliación.
+- Móvil:
+  - Cola separada por entidad y `processPendingBatches()` que aprovecha los endpoints batch manteniendo compatibilidad con el flujo actual.
+  - Próximo: flujos offline en pantallas de eventos y notificaciones locales con Expo Notifications.
+>>>>>>> 324ac6a (mobile: arregla ConfiguracionScreen y añade sync offline batch; test: ajusta jest para msw; chore: instala deps y arranca Expo; backend: endpoints /sync/* y tests batch (v0.19.0 parcial))
 

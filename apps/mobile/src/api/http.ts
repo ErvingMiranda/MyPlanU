@@ -1,9 +1,9 @@
 import axios, { AxiosError } from 'axios';
+import { ApiUrl } from '../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Prefer .env via Expo public variables and provide sane defaults
-// EXPO_PUBLIC_API_URL is already used elsewhere; keep it but also support API_BASE_URL
-const baseUrl = process.env.EXPO_PUBLIC_API_URL || process.env.API_BASE_URL || 'http://127.0.0.1:8000';
+// Base URL centralizada en config.ts (resuelve según plataforma y variable de entorno)
+const baseUrl = ApiUrl;
 
 export const http = axios.create({
   baseURL: baseUrl,

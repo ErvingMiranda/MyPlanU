@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { http, ping } from '../api/http';
 import { showError, showSuccess, showInfo, showRetry } from '../ui/toast';
 import { logEvent } from '../telemetry';
-import { processPending } from '../offline';
+import { processPending, processPendingBatches } from '../offline';
 import { getSessionUserId, clearAuthSession } from '../auth/session';
 
 export default function ConfiguracionScreen(): React.ReactElement {
@@ -38,32 +38,31 @@ export default function ConfiguracionScreen(): React.ReactElement {
   return (
     <View style={Estilos.Contenedor}>
       <Text style={Estilos.Titulo}>Configuracion</Text>
-      <View style={Estilos.Fila}>
-        <Text>Tema Oscuro</Text>
-        <Switch value={TemaOscuro} onValueChange={EstablecerTemaOscuro} />
-      </View>
       <View style={{ marginBottom: 12 }}>
-        <Button title={Syncing ? 'Sincronizando…' : 'Reintentar sync offline'} disabled={Syncing} onPress={async () => {
+        <Button title={Syncing ? 'Sincronizando…' : 'Reintentar sync offline (batch)'} disabled={Syncing} onPress={async () => {
           try {
             SetSyncing(true);
-            const { ok, fail } = await processPending(http);
-            logEvent('offline_sync_attempt', { ok, fail });
+            const batch = await processPendingBatches(http);
+            logEvent('offline_sync_attempt', { metas_ok: batch.metas.ok, metas_fail: batch.metas.fail, eventos_ok: batch.eventos.ok, eventos_fail: batch.eventos.fail });
+            const ok = batch.metas.ok + batch.eventos.ok;
+            const fail = batch.metas.fail + batch.eventos.fail;
             if (ok === 0 && fail === 0) {
               showInfo('Sin operaciones pendientes');
             } else if (fail === 0) {
-              showSuccess(`Sincronizado ${ok}/${ok}`);
+              showSuccess(`Sincronizado ${ok}/${ok} (metas+eventos)`);
             } else {
               showRetry(`Sync parcial: ok ${ok}, fallas ${fail}`, () => {
-                // retry same action
                 (async () => {
                   SetSyncing(true);
                   try {
-                    const r = await processPending(http);
-                    logEvent('offline_sync_retry', { ok: r.ok, fail: r.fail });
-                    if (r.fail === 0) {
-                      showSuccess(`Sincronizado ${r.ok}/${r.ok}`);
+                    const r = await processPendingBatches(http);
+                    const ok2 = r.metas.ok + r.eventos.ok;
+                    const fail2 = r.metas.fail + r.eventos.fail;
+                    logEvent('offline_sync_retry', { metas_ok: r.metas.ok, metas_fail: r.metas.fail, eventos_ok: r.eventos.ok, eventos_fail: r.eventos.fail });
+                    if (fail2 === 0) {
+                      showSuccess(`Sincronizado ${ok2}/${ok2} (metas+eventos)`);
                     } else {
-                      showError(`Aún pendientes: ${r.fail}`);
+                      showError(`Aún pendientes: ${fail2}`);
                     }
                   } finally {
                     SetSyncing(false);
@@ -74,16 +73,16 @@ export default function ConfiguracionScreen(): React.ReactElement {
           } catch (e: any) {
             logEvent('offline_sync_error', { message: e?.message });
             showRetry('Error al sincronizar', () => {
-              // trigger again
               (async () => {
                 SetSyncing(true);
                 try {
-                  const r = await processPending(http);
-                  logEvent('offline_sync_retry', { ok: r.ok, fail: r.fail });
-                  if (r.fail === 0) {
-                    showSuccess(`Sincronizado ${r.ok}/${r.ok}`);
+                  const r = await processPendingBatches(http);
+                  const ok2 = r.metas.ok + r.eventos.ok;
+                  const fail2 = r.metas.fail + r.eventos.fail;
+                  if (fail2 === 0) {
+                    showSuccess(`Sincronizado ${ok2}/${ok2} (metas+eventos)`);
                   } else {
-                    showError(`Aún pendientes: ${r.fail}`);
+                    showError(`Aún pendientes: ${fail2}`);
                   }
                 } finally {
                   SetSyncing(false);
@@ -94,6 +93,10 @@ export default function ConfiguracionScreen(): React.ReactElement {
             SetSyncing(false);
           }
         }} />
+      </View>
+      <View style={Estilos.Fila}>
+        <Text>Tema Oscuro</Text>
+        <Switch value={TemaOscuro} onValueChange={EstablecerTemaOscuro} />
       </View>
       <View style={Estilos.Fila}>
         <Text>Notificaciones</Text>

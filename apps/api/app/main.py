@@ -7,6 +7,7 @@ from app.views.GoalView import Router as MetasRouter
 from app.views.EventoView import Router as EventosRouter
 from app.views.PapeleraView import Router as PapeleraRouter
 from app.views.MonitorView import Router as MonitorRouter
+from app.views.SyncView import Router as SyncRouter
 from app.views.AuthView import RouterAuth, get_current_user
 from app.core.Database import IniciarTablas
 
@@ -45,6 +46,7 @@ def CrearAplicacion() -> FastAPI:
     Aplicacion.include_router(EventosRouter, tags=["eventos", "recordatorios"], dependencies=[Depends(get_current_user)])
     Aplicacion.include_router(PapeleraRouter, tags=["papelera"], dependencies=[Depends(get_current_user)])
     Aplicacion.include_router(MonitorRouter, tags=["auditoria"], dependencies=[Depends(get_current_user)])
+    Aplicacion.include_router(SyncRouter, prefix="", tags=["sync"], dependencies=[Depends(get_current_user)])
 
     return Aplicacion
 

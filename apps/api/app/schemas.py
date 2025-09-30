@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, validator
 
 # ---- Meta ----
@@ -120,3 +120,29 @@ class RecordatorioRespuesta(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---- Sincronización (Batch) ----
+class BatchOpBase(BaseModel):
+    kind: str  # 'create' | 'update'
+    tempId: Optional[int] = None  # para create
+    targetId: Optional[int] = None  # para update
+    data: Dict[str, Any]
+
+class BatchRequest(BaseModel):
+    operations: List[BatchOpBase]
+    sequential: bool = True
+    continueOnError: bool = True
+
+class BatchItemResult(BaseModel):
+    index: int
+    kind: str
+    ok: bool
+    id: Optional[int] = None
+    tempId: Optional[int] = None
+    targetId: Optional[int] = None
+    error: Optional[str] = None
+
+class BatchResponse(BaseModel):
+    results: List[BatchItemResult]
+    mappings: Dict[str, int] = {}

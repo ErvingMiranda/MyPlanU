@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Button } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Evento, ObtenerEventos } from '../api/ClienteApi';
+import { getCachedEventos, setCachedEventos } from '../offline';
 import { ObtenerZonaHoraria } from '../userPrefs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -9,7 +10,21 @@ type Props = NativeStackScreenProps<any, any>;
 
 export default function ListaEventosScreen({ navigation }: Props): React.ReactElement {
   const zona = ObtenerZonaHoraria();
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['eventos', zona], queryFn: () => ObtenerEventos(1) });
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['eventos', zona],
+    queryFn: async () => {
+      try {
+        const evs = await ObtenerEventos(1);
+        // cache on success
+        await setCachedEventos(evs as any);
+        return evs;
+      } catch (e) {
+        const cached = await getCachedEventos();
+        if (cached && cached.length > 0) return cached as any;
+        throw e;
+      }
+    }
+  });
 
   return (
     <View style={Estilos.Contenedor}>
@@ -18,7 +33,7 @@ export default function ListaEventosScreen({ navigation }: Props): React.ReactEl
         <Button title="Refrescar" onPress={() => refetch()} />
       </View>
       {isLoading && <ActivityIndicator />}
-      {isError && <Text>Ocurrio un error al cargar eventos.</Text>}
+  {isError && <Text>Ocurrio un error al cargar eventos.</Text>}
       <FlatList
         data={data ?? []}
         keyExtractor={(item) => String(item.Id)}

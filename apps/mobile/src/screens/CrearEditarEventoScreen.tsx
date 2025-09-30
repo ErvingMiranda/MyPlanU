@@ -4,6 +4,7 @@ import { showError, showSuccess } from '../ui/toast';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Evento, CrearEvento, ActualizarEvento } from '../api/ClienteApi';
+import { enqueueEvent, getCachedEventos, setCachedEventos } from '../offline';
 import { ObtenerZonaHoraria } from '../userPrefs';
 import { getSessionUserId } from '../auth/session';
 
@@ -47,7 +48,7 @@ export default function CrearEditarEventoScreen(): React.ReactElement {
     }
     try {
       if (EventoInicial) {
-        const actualizado = await ActualizarEvento(EventoInicial.Id, {
+        const cambios = {
           Titulo: Titulo || undefined,
           Descripcion: Descripcion,
           Inicio: Inicio || undefined,
@@ -55,9 +56,21 @@ export default function CrearEditarEventoScreen(): React.ReactElement {
           Ubicacion: Ubicacion,
           ZonaHorariaEntrada: ObtenerZonaHoraria(),
           UsuarioId: UsuarioActualId ?? EventoInicial.PropietarioId,
-        });
-  showSuccess(`Evento ${actualizado.Id} actualizado`);
-        navigation.goBack();
+        } as any;
+        try {
+          const actualizado = await ActualizarEvento(EventoInicial.Id, cambios);
+          showSuccess(`Evento ${actualizado.Id} actualizado`);
+          navigation.goBack();
+        } catch (e: any) {
+          // Encolar update offline
+          await enqueueEvent({ kind: 'update', entity: 'Evento', targetId: EventoInicial.Id, payload: cambios });
+          // Actualizar cache local si existiera
+          const cache = (await getCachedEventos()) ?? [];
+          const idx = cache.findIndex(ev => ev.Id === EventoInicial.Id);
+          if (idx >= 0) { cache[idx] = { ...cache[idx], ...cambios, ActualizadoEn: new Date().toISOString() } as any; await setCachedEventos(cache as any); }
+          showSuccess(`Evento encolado para sync`);
+          navigation.goBack();
+        }
       } else {
         // Para crear se requieren MetaId y PropietarioId
         const metaId = parseInt(MetaId, 10);
@@ -67,7 +80,7 @@ export default function CrearEditarEventoScreen(): React.ReactElement {
           Alert.alert('Faltan datos', 'MetaId, PropietarioId, Titulo, Inicio y Fin son obligatorios');
           return;
         }
-        const creado = await CrearEvento({
+        const payload = {
           MetaId: metaId,
           PropietarioId: sessionId,
           Titulo,
@@ -77,9 +90,22 @@ export default function CrearEditarEventoScreen(): React.ReactElement {
           Ubicacion: Ubicacion || undefined,
           ZonaHorariaEntrada: ObtenerZonaHoraria(),
           UsuarioId: sessionId,
-        } as any);
-  showSuccess(`Evento ${creado.Id} creado`);
-        navigation.goBack();
+        } as any;
+        try {
+          const creado = await CrearEvento(payload);
+          showSuccess(`Evento ${creado.Id} creado`);
+          navigation.goBack();
+        } catch (e: any) {
+          // éxito optimista con tempId negativo
+          const tempId = -Math.floor(Math.random() * 1_000_000) - 1;
+          const now = new Date().toISOString();
+          const optimistic: Evento = { Id: tempId, MetaId: metaId, PropietarioId: propietarioId, Titulo, Descripcion: Descripcion || null, Inicio, Fin, Ubicacion: Ubicacion || null, CreadoEn: now } as any;
+          const cache = (await getCachedEventos()) ?? [];
+          await setCachedEventos([optimistic as any, ...cache]);
+          await enqueueEvent({ kind: 'create', entity: 'Evento', tempId, payload });
+          showSuccess('Evento encolado para sync');
+          navigation.goBack();
+        }
       }
     } catch (e: any) { showError(e?.message ?? 'Fallo en API'); }
   };

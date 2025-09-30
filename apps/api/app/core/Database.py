@@ -26,6 +26,9 @@ def IniciarTablas() -> None:
             cols_u = {row[1] for row in res_u} if res_u else set()
             if 'ZonaHoraria' not in cols_u:
                 conn.exec_driver_sql("ALTER TABLE usuario ADD COLUMN ZonaHoraria VARCHAR NULL")
+            # Usuario.ContrasenaHash
+            if 'ContrasenaHash' not in cols_u:
+                conn.exec_driver_sql("ALTER TABLE usuario ADD COLUMN ContrasenaHash VARCHAR NULL DEFAULT ''")
             res = conn.exec_driver_sql("PRAGMA table_info('recordatorio')").fetchall()
             columnas = {row[1] for row in res} if res else set()
             if 'Mensaje' not in columnas:
@@ -82,3 +85,8 @@ def IniciarTablas() -> None:
 def ObtenerSesion() -> Generator[Session, None, None]:
     with Session(Motor) as SesionBD:
         yield SesionBD
+
+
+# Compatibilidad con pruebas antiguas
+def ObtenerEngine():
+    return Motor

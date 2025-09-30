@@ -177,15 +177,17 @@ class EventosService:
                     dias = [base_ini.weekday()]  # si no hay lista, usa el del inicio
                 # Encontrar la primera semana que cae en rango
                 semana_delta = timedelta(weeks=intervalo)
-                # anclar a inicio de semana del base_ini (lunes=0)
-                base_week_start = base_ini - timedelta(days=base_ini.weekday())
+                # anclar a inicio de semana del base_ini (lunes=0) a medianoche
+                base_week_start = (base_ini - timedelta(days=base_ini.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
                 cur_week_start = base_week_start
                 while cur_week_start + timedelta(days=6) < Desde and max_iters > 0:
                     cur_week_start += semana_delta
                     max_iters -= 1
                 while cur_week_start <= Hasta and max_iters > 0:
                     for d in dias:
-                        occ_ini = cur_week_start + timedelta(days=d, hours=base_ini.hour, minutes=base_ini.minute, seconds=base_ini.second)
+                        occ_ini = cur_week_start + timedelta(days=d) + (base_fin - base_ini) * 0
+                        # sumar la hora/min/seg del base_ini
+                        occ_ini = occ_ini.replace(hour=base_ini.hour, minute=base_ini.minute, second=base_ini.second, microsecond=base_ini.microsecond)
                         dur = base_fin - base_ini
                         occ_fin = occ_ini + dur
                         if occ_fin >= Desde and occ_ini <= Hasta and occ_fin >= ahora:

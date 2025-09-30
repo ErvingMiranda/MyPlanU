@@ -176,11 +176,11 @@ def CrearEvento(
         raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="EventoInvalido: Meta/Propietario inexistentes, rol no permitido o rango de tiempo")
-    tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
-    # Formateo manual manteniendo response_model casting
-    Entidad.Inicio = Entidad.Inicio  # ya UTC naive
-    Entidad.Fin = Entidad.Fin
-    return Entidad
+    # Normalizar DiasSemana CSV -> lista en la respuesta
+    obj = Entidad.dict()
+    if obj.get("DiasSemana"):
+        obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
+    return obj
 
 
 @Router.get("/eventos/{Id}")
@@ -245,7 +245,10 @@ def ActualizarEvento(
         raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="EventoInvalido: no encontrado, eliminado o rango de tiempo invalido")
-    return Entidad
+    obj = Entidad.dict()
+    if obj.get("DiasSemana"):
+        obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
+    return obj
 
 
 @Router.delete("/eventos/{Id}")
@@ -334,7 +337,10 @@ def CrearRecordatorio(
         raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="RecordatorioInvalido: evento inexistente/eliminado, rol no permitido o fecha pasada")
-    return Entidad
+    obj = Entidad.dict()
+    if obj.get("DiasSemana"):
+        obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
+    return obj
 
 
 @Router.get("/recordatorios/{Id}")
@@ -391,7 +397,10 @@ def ActualizarRecordatorio(
         raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="RecordatorioInvalido: no encontrado/eliminado o fecha/rol invalidos")
-    return Entidad
+    obj = Entidad.dict()
+    if obj.get("DiasSemana"):
+        obj["DiasSemana"] = [d for d in obj["DiasSemana"].split(",") if d]
+    return obj
 
 
 @Router.delete("/recordatorios/{Id}")
