@@ -5,6 +5,9 @@
     "version": "0.1.0",
     "platforms": ["ios", "android", "web"],
     "orientation": "portrait",
-    "assetBundlePatterns": ["**/*"]
+    "assetBundlePatterns": ["**/*"],
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "https://sturdy-telegram-jj7rwr67575v3pjgp-8000.app.github.dev"
+    }
   }
 }

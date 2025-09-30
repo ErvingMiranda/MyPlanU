@@ -205,6 +205,26 @@ v0.13.1
 
 MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Este repositorio es un monorepo con backend (FastAPI + SQLModel) y app móvil (Expo + TypeScript), con convenciones en español y arquitectura MSV.
 
+Prueba rápida en móvil (dev)
+----------------------------
+1) Backend (API):
+  - En la raíz del repo, crea un entorno y levanta la API en 0.0.0.0:8000.
+    - Endpoints de salud: `GET /health` y `GET /salud`.
+  - Variable de CORS opcional: `MYPLANU_CORS_ORIGINS` (lista separada por comas) si necesitas restringir orígenes.
+
+2) App móvil (Expo):
+  - En `apps/mobile`, instala dependencias y ejecuta `expo start` (o `--tunnel` para compartir por Internet y escanear QR desde el teléfono).
+  - La app lee `EXPO_PUBLIC_API_URL` (en `.env` o `app.json`). Si cambias esta variable, reinicia Expo para que surta efecto.
+
+3) Configurar URL del backend desde la app (sin reconstruir):
+  - En la pantalla “Configuración” hay un campo “API_BASE_URL (solo dev)”.
+  - Escribe la URL accesible desde tu dispositivo (por ejemplo, `http://<IP_LAN>:8000` o una URL pública) y pulsa “Guardar”.
+  - Luego pulsa “Probar conexión” para verificar. Si ves “✅ OK”, procede a registro/login.
+
+Notas:
+- En simuladores: Android usa `10.0.2.2:8000` y iOS `localhost:8000` por defecto si no defines `EXPO_PUBLIC_API_URL`.
+- En dispositivo físico, suele ser necesario usar un túnel (`expo start --tunnel`) y una URL pública o la IP LAN del host.
+
 v0.13.2
   - Movil: nuevo cliente HTTP en `apps/mobile/src/api/http.ts` (Axios) que lee API_BASE_URL y EXPO_PUBLIC_API_URL.
   - Agrega `apps/mobile/.env.example` con API_BASE_URL. En simulador usa 127.0.0.1; en dispositivo fisico, usa la IP LAN de tu maquina (ej. http://192.168.1.10:8000).
