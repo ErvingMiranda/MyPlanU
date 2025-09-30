@@ -5,6 +5,7 @@ import { logEvent } from '../telemetry';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Meta, RecuperarMeta } from '../api/ClienteApi';
+import { getSessionUserId } from '../auth/session';
 
 type Parametros = { DetalleMeta: { meta: Meta } };
 
@@ -12,6 +13,16 @@ export default function DetalleMetaScreen(): React.ReactElement {
   const ruta = useRoute<RouteProp<Parametros, 'DetalleMeta'>>();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const meta = ruta.params?.meta;
+  const [UsuarioId, SetUsuarioId] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      const uid = await getSessionUserId();
+      SetUsuarioId(uid);
+    })();
+  }, []);
+
+  const puedeEditar = meta && UsuarioId != null ? meta.PropietarioId === UsuarioId : true;
 
   if (!meta) {
     return (
@@ -34,7 +45,7 @@ export default function DetalleMetaScreen(): React.ReactElement {
       {meta.EliminadoEn ? (
   <Button title="Recuperar" onPress={async () => { try { await RecuperarMeta(meta.Id); showSuccess('Meta recuperada'); logEvent('recover_success', { tipo: 'Meta', Id: meta.Id }); navigation.goBack(); } catch (e: any) { logEvent('recover_error', { tipo: 'Meta', Id: meta.Id, message: e?.message }); showRetry(e?.message ?? 'No se pudo recuperar', async () => { try { await RecuperarMeta(meta.Id); showSuccess('Meta recuperada'); logEvent('recover_success', { tipo: 'Meta', Id: meta.Id, retry: true }); navigation.goBack(); } catch (ee: any) { logEvent('recover_error', { tipo: 'Meta', Id: meta.Id, message: ee?.message, retry: true }); showError(ee?.message ?? 'No se pudo recuperar'); } }); } }} />
       ) : (
-        <Button title="Editar" onPress={() => navigation.navigate('CrearEditarMeta', { meta })} />
+        <Button title="Editar" disabled={!puedeEditar} onPress={() => navigation.navigate('CrearEditarMeta', { meta })} />
       )}
     </View>
   );

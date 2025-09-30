@@ -6,12 +6,19 @@ from sqlmodel import Session, select
 from app.models.Evento import Evento, Recordatorio
 from app.models.Goal import Meta
 from app.services.UsuariosService import UsuariosService
-from app.core.Permisos import RolParticipante
+from app.services.ParticipantesService import ParticipantesService
+from app.services.BitacoraService import BitacoraService
+from app.services.NotificacionesService import NotificacionesService
+from app.core.Permisos import RolParticipante, TienePermiso
+from app.services.exceptions import PermisoDenegadoError
 
 
 class EventosService:
     def __init__(self) -> None:
         self.Usuarios = UsuariosService()
+        self.Participantes = ParticipantesService()
+        self.Bitacora = BitacoraService()
+        self.Notificaciones = NotificacionesService()
 
     def _ListaADiasCSV(self, dias: Optional[List[str]]) -> Optional[str]:
         if not dias:
@@ -37,14 +44,13 @@ class EventosService:
         FrecuenciaRepeticion: Optional[str] = None,
         IntervaloRepeticion: Optional[int] = None,
         DiasSemana: Optional[List[str]] = None,
-        Rol: RolParticipante = RolParticipante.Dueno,
+        SolicitanteId: Optional[int] = None,
     ) -> Optional[Evento]:
-        # Permisos: Dueno/Colaborador pueden crear; Lector no
-        if Rol == RolParticipante.Lector:
-            return None
         # Validaciones: Inicio < Fin
         if not (Inicio < Fin):
             return None
+        if SolicitanteId is not None and PropietarioId != SolicitanteId:
+            raise PermisoDenegadoError("EventoInvalido: PropietarioId debe coincidir con el usuario autenticado")
         # Validacion repeticion
         if FrecuenciaRepeticion and (IntervaloRepeticion is not None) and IntervaloRepeticion <= 0:
             return None
@@ -54,6 +60,10 @@ class EventosService:
             return None
         if not self.Usuarios.Existe(SesionBD, Id=PropietarioId):
             return None
+        if SolicitanteId is not None:
+            rol = self.Participantes.RolEnMeta(SesionBD, MetaEntidad, SolicitanteId)
+            if not TienePermiso(rol, "crear"):
+                raise PermisoDenegadoError("EventoInvalido: no tienes permisos para crear eventos en esta meta")
 
         Entidad = Evento(
             MetaId=MetaId,
@@ -70,6 +80,8 @@ class EventosService:
         SesionBD.add(Entidad)
         SesionBD.commit()
         SesionBD.refresh(Entidad)
+        if SolicitanteId is not None:
+            self.Participantes.AsegurarDuenoEvento(SesionBD, Entidad.Id, SolicitanteId)
         return Entidad
 
     def ListarEventos(self, SesionBD: Session) -> List[Evento]:
@@ -212,24 +224,27 @@ class EventosService:
         FrecuenciaRepeticion: Optional[str] = None,
         IntervaloRepeticion: Optional[int] = None,
         DiasSemana: Optional[List[str]] = None,
-        Rol: RolParticipante = RolParticipante.Dueno,
+        SolicitanteId: Optional[int] = None,
     ) -> Optional[Evento]:
-        # Permisos: Dueno/Colaborador pueden actualizar; Lector no
-        if Rol == RolParticipante.Lector:
-            return None
         Entidad = SesionBD.get(Evento, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
+            return None
+        if SolicitanteId is not None:
+            rol = self.Participantes.ObtenerRolEnEvento(SesionBD, Id, SolicitanteId)
+            if not TienePermiso(rol, "actualizar"):
+                raise PermisoDenegadoError("EventoInvalido: no tienes permisos para actualizar este evento")
+        nuevo_inicio = Inicio if Inicio is not None else Entidad.Inicio
+        nuevo_fin = Fin if Fin is not None else Entidad.Fin
+        if nuevo_inicio >= nuevo_fin:
             return None
         if Inicio is not None:
             Entidad.Inicio = Inicio
         if Fin is not None:
             Entidad.Fin = Fin
-        # Validar ventana de tiempo si ambos estan seteados o cambiaron
-        if Entidad.Inicio >= Entidad.Fin:
-            return None
         if FrecuenciaRepeticion is not None:
             if FrecuenciaRepeticion and (IntervaloRepeticion is not None) and IntervaloRepeticion <= 0:
                 return None
+            Entidad.FrecuenciaRepeticion = FrecuenciaRepeticion
         if Titulo is not None:
             Entidad.Titulo = Titulo
         if Descripcion is not None:
@@ -248,26 +263,38 @@ class EventosService:
         SesionBD.refresh(Entidad)
         return Entidad
 
-    def EliminarEvento(self, SesionBD: Session, Id: int, Rol: RolParticipante = RolParticipante.Dueno) -> bool:
-        # Permisos: solo Dueno puede eliminar
-        if Rol != RolParticipante.Dueno:
-            return False
+    def EliminarEvento(self, SesionBD: Session, Id: int, SolicitanteId: Optional[int] = None) -> bool:
         Entidad = SesionBD.get(Evento, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return False
+        if SolicitanteId is not None:
+            rol = self.Participantes.ObtenerRolEnEvento(SesionBD, Id, SolicitanteId)
+            if rol != RolParticipante.Dueno:
+                raise PermisoDenegadoError("EventoInvalido: solo el Dueno puede eliminar el evento")
         # Soft delete del evento
-        Entidad.EliminadoEn = datetime.utcnow()
+        ahora = datetime.utcnow()
+        Entidad.EliminadoEn = ahora
         SesionBD.add(Entidad)
         # Cascada logica: marcar recordatorios relacionados
         Consulta = select(Recordatorio).where(Recordatorio.EventoId == Id, Recordatorio.EliminadoEn.is_(None))
         for Rec in SesionBD.exec(Consulta):
-            Rec.EliminadoEn = datetime.utcnow()
+            Rec.EliminadoEn = ahora
             SesionBD.add(Rec)
-        # TODO: Notificar a participantes del evento sobre la eliminacion (integrar mecanismo de notificaciones)
+        participantes = self.Participantes.ListarPorEvento(SesionBD, Id)
+        destinos = {Entidad.PropietarioId}
+        for participante in participantes:
+            destinos.add(participante.UsuarioId)
+        self.Notificaciones.RegistrarEventoEliminado(
+            SesionBD,
+            Id,
+            destinos,
+            f"El evento '{Entidad.Titulo}' fue eliminado",
+            Momento=ahora,
+        )
         SesionBD.commit()
         return True
 
-    def RecuperarEvento(self, SesionBD: Session, Id: int) -> Optional[Evento]:
+    def RecuperarEvento(self, SesionBD: Session, Id: int, SolicitanteId: Optional[int] = None) -> Optional[Evento]:
         Entidad = SesionBD.get(Evento, Id)
         if not Entidad:
             return None
@@ -277,9 +304,26 @@ class EventosService:
         MetaEntidad = SesionBD.get(Meta, Entidad.MetaId)
         if not MetaEntidad or MetaEntidad.EliminadoEn is not None:
             return None
-        # TODO(bitacora): registrar quien y cuando recupera
+        if SolicitanteId is not None:
+            rol = self.Participantes.RolEnMeta(SesionBD, MetaEntidad, SolicitanteId)
+            if not TienePermiso(rol, "recuperar"):
+                raise PermisoDenegadoError("EventoInvalido: no tienes permisos para recuperar este evento")
+        momento = datetime.utcnow()
         Entidad.EliminadoEn = None
-        Entidad.ActualizadoEn = datetime.utcnow()
+        Entidad.ActualizadoEn = momento
+        detalle = (
+            f"Recuperado por usuario {SolicitanteId}"
+            if SolicitanteId is not None
+            else "Recuperacion sin solicitante"
+        )
+        self.Bitacora.RegistrarRecuperacion(
+            SesionBD,
+            "Evento",
+            Entidad.Id,
+            SolicitanteId,
+            Detalle=detalle,
+            Momento=momento,
+        )
         SesionBD.add(Entidad)
         SesionBD.commit()
         SesionBD.refresh(Entidad)
@@ -287,6 +331,10 @@ class EventosService:
 
 
 class RecordatoriosService:
+    def __init__(self) -> None:
+        self.Participantes = ParticipantesService()
+        self.Bitacora = BitacoraService()
+
     def _ListaADiasCSV(self, dias: Optional[List[str]]) -> Optional[str]:
         if not dias:
             return None
@@ -307,11 +355,12 @@ class RecordatoriosService:
         FrecuenciaRepeticion: Optional[str] = None,
         IntervaloRepeticion: Optional[int] = None,
         DiasSemana: Optional[List[str]] = None,
-        Rol: RolParticipante = RolParticipante.Dueno,
+        SolicitanteId: Optional[int] = None,
     ) -> Optional[Recordatorio]:
-        # Permisos: Dueno/Colaborador pueden crear; Lector no
-        if Rol == RolParticipante.Lector:
-            return None
+        if SolicitanteId is not None:
+            rol = self.Participantes.ObtenerRolEnEvento(SesionBD, EventoId, SolicitanteId)
+            if not TienePermiso(rol, "crear"):
+                raise PermisoDenegadoError("RecordatorioInvalido: no tienes permisos para crear recordatorios")
         # No crear en el pasado
         if FechaHora < datetime.utcnow():
             return None
@@ -369,14 +418,15 @@ class RecordatoriosService:
         FrecuenciaRepeticion: Optional[str] = None,
         IntervaloRepeticion: Optional[int] = None,
         DiasSemana: Optional[List[str]] = None,
-        Rol: RolParticipante = RolParticipante.Dueno,
+        SolicitanteId: Optional[int] = None,
     ) -> Optional[Recordatorio]:
-        # Permisos: Dueno/Colaborador pueden actualizar; Lector no
-        if Rol == RolParticipante.Lector:
-            return None
         Entidad = SesionBD.get(Recordatorio, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return None
+        if SolicitanteId is not None:
+            rol = self.Participantes.ObtenerRolEnEvento(SesionBD, Entidad.EventoId, SolicitanteId)
+            if not TienePermiso(rol, "actualizar"):
+                raise PermisoDenegadoError("RecordatorioInvalido: no tienes permisos para actualizar este recordatorio")
         if FechaHora is not None:
             if FechaHora < datetime.utcnow():
                 return None
@@ -470,19 +520,20 @@ class RecordatoriosService:
         )
         return list(SesionBD.exec(Consulta))
 
-    def EliminarRecordatorio(self, SesionBD: Session, Id: int, Rol: RolParticipante = RolParticipante.Dueno) -> bool:
-        # Permisos: por defecto solo Dueno puede eliminar
-        if Rol != RolParticipante.Dueno:
-            return False
+    def EliminarRecordatorio(self, SesionBD: Session, Id: int, SolicitanteId: Optional[int] = None) -> bool:
         Entidad = SesionBD.get(Recordatorio, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return False
+        if SolicitanteId is not None:
+            rol = self.Participantes.ObtenerRolEnEvento(SesionBD, Entidad.EventoId, SolicitanteId)
+            if rol != RolParticipante.Dueno:
+                raise PermisoDenegadoError("RecordatorioInvalido: solo el Dueno puede eliminar el recordatorio")
         Entidad.EliminadoEn = datetime.utcnow()
         SesionBD.add(Entidad)
         SesionBD.commit()
         return True
 
-    def RecuperarRecordatorio(self, SesionBD: Session, Id: int) -> Optional[Recordatorio]:
+    def RecuperarRecordatorio(self, SesionBD: Session, Id: int, SolicitanteId: Optional[int] = None) -> Optional[Recordatorio]:
         Entidad = SesionBD.get(Recordatorio, Id)
         if not Entidad:
             return None
@@ -492,9 +543,26 @@ class RecordatoriosService:
         EventoEntidad = SesionBD.get(Evento, Entidad.EventoId)
         if not EventoEntidad or EventoEntidad.EliminadoEn is not None:
             return None
-        # TODO(bitacora): registrar quien y cuando recupera
+        if SolicitanteId is not None:
+            rol = self.Participantes.ObtenerRolEnEvento(SesionBD, Entidad.EventoId, SolicitanteId)
+            if not TienePermiso(rol, "recuperar"):
+                raise PermisoDenegadoError("RecordatorioInvalido: no tienes permisos para recuperar el recordatorio")
+        momento = datetime.utcnow()
         Entidad.EliminadoEn = None
         SesionBD.add(Entidad)
+        detalle = (
+            f"Recuperado por usuario {SolicitanteId}"
+            if SolicitanteId is not None
+            else "Recuperacion sin solicitante"
+        )
+        self.Bitacora.RegistrarRecuperacion(
+            SesionBD,
+            "Recordatorio",
+            Entidad.Id,
+            SolicitanteId,
+            Detalle=detalle,
+            Momento=momento,
+        )
         SesionBD.commit()
         SesionBD.refresh(Entidad)
         return Entidad

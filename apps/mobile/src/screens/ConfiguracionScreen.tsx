@@ -5,10 +5,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActualizarUsuario } from '../api/ClienteApi';
 import { EstablecerZonaHoraria, ObtenerZonaHoraria } from '../userPrefs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { http, ping, clearAuthToken } from '../api/http';
+import { http, ping } from '../api/http';
 import { showError, showSuccess, showInfo, showRetry } from '../ui/toast';
 import { logEvent } from '../telemetry';
 import { processPending } from '../offline';
+import { getSessionUserId, clearAuthSession } from '../auth/session';
 
 export default function ConfiguracionScreen(): React.ReactElement {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -26,6 +27,10 @@ export default function ConfiguracionScreen(): React.ReactElement {
       if (guardada) {
         SetApiBaseUrl(guardada);
         http.defaults.baseURL = guardada;
+      }
+      const storedUser = await getSessionUserId();
+      if (storedUser != null) {
+        EstablecerUsuarioId(String(storedUser));
       }
     })();
   }, []);
@@ -150,7 +155,7 @@ export default function ConfiguracionScreen(): React.ReactElement {
       </View>
       <View style={{ marginTop: 24 }}>
         <Button title="Cerrar Sesión" color="#b00" onPress={async () => {
-          await clearAuthToken();
+          await clearAuthSession();
           navigation.reset({ index: 0, routes: [{ name: 'LoginRegistro' }] });
         }} />
       </View>

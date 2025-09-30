@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -35,8 +35,8 @@ function TabsPrincipales(): React.ReactElement {
   );
 }
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TOKEN_KEY, clearAuthToken } from './src/api/http';
+import { hasAuthToken, getSessionUserId } from './src/auth/session';
+import { ObtenerNotificacionesSistema, MarcarNotificacionLeida } from './src/api/ClienteApi';
 
 export default function AplicacionMovil(): React.ReactElement {
   const [checking, setChecking] = React.useState(true);
@@ -47,19 +47,50 @@ export default function AplicacionMovil(): React.ReactElement {
     // try to process pending offline queue on startup
     processPending(http).catch(() => {});
     (async () => {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      setAuthed(!!token);
+      const tokenExists = await hasAuthToken();
+      setAuthed(tokenExists);
       setChecking(false);
     })();
   }, []);
-  const onLogout = React.useCallback(async () => {
-    await clearAuthToken();
-    setAuthed(false);
-  }, []);
-  const onLoggedIn = React.useCallback(() => setAuthed(true), []);
+
+  React.useEffect(() => {
+    let cancelado = false;
+    let intervalo: ReturnType<typeof setInterval> | undefined;
+    const revisar = async () => {
+      if (!authed || cancelado) return;
+      try {
+        const userId = await getSessionUserId();
+        if (!userId) return;
+        const notificaciones = await ObtenerNotificacionesSistema();
+        for (const notif of notificaciones) {
+          if (cancelado) break;
+          Alert.alert('Notificacion', notif.Mensaje);
+          await MarcarNotificacionLeida(notif.Id);
+        }
+      } catch (e: any) {
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.warn('No se pudieron obtener notificaciones', e?.message ?? e);
+        }
+      }
+    };
+    if (authed) {
+      revisar();
+      intervalo = setInterval(revisar, 15000);
+    }
+    return () => {
+      cancelado = true;
+      if (intervalo) clearInterval(intervalo);
+    };
+  }, [authed]);
   return (
     <QueryClientProvider client={Cliente}>
-      <NavigationContainer>
+      <NavigationContainer
+        onStateChange={async () => {
+          const tokenExists = await hasAuthToken();
+          setAuthed(tokenExists);
+        }}
+      >
         {checking ? null : (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {!authed && (

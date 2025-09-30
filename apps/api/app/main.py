@@ -6,13 +6,14 @@ from app.views.HealthView import Router as SaludRouter, RouterHealth as HealthRo
 from app.views.GoalView import Router as MetasRouter
 from app.views.EventoView import Router as EventosRouter
 from app.views.PapeleraView import Router as PapeleraRouter
+from app.views.MonitorView import Router as MonitorRouter
 from app.views.AuthView import RouterAuth, get_current_user
 from app.core.Database import IniciarTablas
 
 
 def CrearAplicacion() -> FastAPI:
-    # Version alineada con el changelog (v0.14.x). Mantener sincronizada al liberar.
-    Aplicacion = FastAPI(title="MyPlanU API", version="0.16.0")
+    # Version alineada con el changelog (v0.18.x). Mantener sincronizada al liberar.
+    Aplicacion = FastAPI(title="MyPlanU API", version="0.18.0")
 
     # Asegurar creacion de tablas al construir la app (idempotente)
     IniciarTablas()
@@ -43,6 +44,7 @@ def CrearAplicacion() -> FastAPI:
     Aplicacion.include_router(MetasRouter, tags=["usuarios", "metas"], dependencies=[Depends(get_current_user)])
     Aplicacion.include_router(EventosRouter, tags=["eventos", "recordatorios"], dependencies=[Depends(get_current_user)])
     Aplicacion.include_router(PapeleraRouter, tags=["papelera"], dependencies=[Depends(get_current_user)])
+    Aplicacion.include_router(MonitorRouter, tags=["auditoria"], dependencies=[Depends(get_current_user)])
 
     return Aplicacion
 

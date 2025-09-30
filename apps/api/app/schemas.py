@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, validator
 # ---- Meta ----
 class MetaBase(BaseModel):
     Titulo: str = Field(..., min_length=1)
-    TipoMeta: str = Field(..., regex=r"^(Individual|Colectiva)$")
+    TipoMeta: str = Field(..., pattern=r"^(Individual|Colectiva)$")
     Descripcion: Optional[str] = None
 
 class MetaCrear(MetaBase):
@@ -13,7 +13,7 @@ class MetaCrear(MetaBase):
 
 class MetaActualizar(BaseModel):
     Titulo: Optional[str] = Field(None, min_length=1)
-    TipoMeta: Optional[str] = Field(None, regex=r"^(Individual|Colectiva)$")
+    TipoMeta: Optional[str] = Field(None, pattern=r"^(Individual|Colectiva)$")
     Descripcion: Optional[str] = None
 
 class MetaRespuesta(MetaBase):
@@ -35,7 +35,7 @@ class EventoBase(BaseModel):
     Fin: datetime
     Descripcion: Optional[str] = None
     Ubicacion: Optional[str] = None
-    FrecuenciaRepeticion: Optional[str] = Field(None, regex=r"^(Diaria|Semanal|Mensual)$")
+    FrecuenciaRepeticion: Optional[str] = Field(None, pattern=r"^(Diaria|Semanal|Mensual)$")
     IntervaloRepeticion: Optional[int] = None
     DiasSemana: Optional[List[str]] = None  # Se convertirá a CSV en modelo persistente
 
@@ -55,7 +55,7 @@ class EventoActualizar(BaseModel):
     Fin: Optional[datetime] = None
     Descripcion: Optional[str] = None
     Ubicacion: Optional[str] = None
-    FrecuenciaRepeticion: Optional[str] = Field(None, regex=r"^(Diaria|Semanal|Mensual)$")
+    FrecuenciaRepeticion: Optional[str] = Field(None, pattern=r"^(Diaria|Semanal|Mensual)$")
     IntervaloRepeticion: Optional[int] = None
     DiasSemana: Optional[List[str]] = None
 
@@ -87,9 +87,9 @@ class EventoRespuesta(BaseModel):
 class RecordatorioBase(BaseModel):
     EventoId: int
     FechaHora: datetime
-    Canal: str = Field(..., regex=r"^(Local|Push)$")
+    Canal: str = Field(..., pattern=r"^(Local|Push)$")
     Mensaje: Optional[str] = None
-    FrecuenciaRepeticion: Optional[str] = Field(None, regex=r"^(Diaria|Semanal|Mensual)$")
+    FrecuenciaRepeticion: Optional[str] = Field(None, pattern=r"^(Diaria|Semanal|Mensual)$")
     IntervaloRepeticion: Optional[int] = None
     DiasSemana: Optional[List[str]] = None
 
@@ -98,10 +98,10 @@ class RecordatorioCrear(RecordatorioBase):
 
 class RecordatorioActualizar(BaseModel):
     FechaHora: Optional[datetime] = None
-    Canal: Optional[str] = Field(None, regex=r"^(Local|Push)$")
+    Canal: Optional[str] = Field(None, pattern=r"^(Local|Push)$")
     Mensaje: Optional[str] = None
     Enviado: Optional[bool] = None
-    FrecuenciaRepeticion: Optional[str] = Field(None, regex=r"^(Diaria|Semanal|Mensual)$")
+    FrecuenciaRepeticion: Optional[str] = Field(None, pattern=r"^(Diaria|Semanal|Mensual)$")
     IntervaloRepeticion: Optional[int] = None
     DiasSemana: Optional[List[str]] = None
 

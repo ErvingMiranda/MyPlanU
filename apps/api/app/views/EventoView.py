@@ -17,6 +17,9 @@ from app.schemas import (
     RecordatorioRespuesta,
 )
 from app.services.UsuariosService import UsuariosService
+from app.services.exceptions import PermisoDenegadoError, ReglaNegocioError
+from app.models.Goal import Usuario
+from app.views.AuthView import get_current_user
 
 try:
     # Python 3.9+
@@ -54,17 +57,22 @@ def _obtener_tz(SesionBD: Session, UsuarioId: Optional[int], ZonaHoraria: Option
     return timezone.utc
 
 
-def _a_utc_naive(dt: Optional[datetime], ZonaEntrada: Optional[str] = None) -> Optional[datetime]:
-    """Convierte un datetime a UTC naive. Si dt es naive y se provee ZonaEntrada, lo interpreta en esa zona."""
+def _a_utc_naive(
+    dt: Optional[datetime],
+    ZonaEntrada: Optional[str] = None,
+    ZonaFallback: Optional[str] = None,
+) -> Optional[datetime]:
+    """Convierte un datetime a UTC naive. Usa ZonaEntrada o ZonaFallback para interpretar valores naive."""
     if dt is None:
         return None
     # Si viene con tzinfo, convertir a UTC
     if dt.tzinfo is not None:
         return dt.astimezone(timezone.utc).replace(tzinfo=None)
     # Si es naive y se indico ZonaEntrada, interpretarlo en esa zona
-    if ZonaEntrada and ZoneInfo:
+    zona_origen = ZonaEntrada or ZonaFallback
+    if zona_origen and ZoneInfo:
         try:
-            loc = dt.replace(tzinfo=ZoneInfo(ZonaEntrada))
+            loc = dt.replace(tzinfo=ZoneInfo(zona_origen))
             return loc.astimezone(timezone.utc).replace(tzinfo=None)
         except Exception:
             pass
@@ -140,25 +148,32 @@ def CrearEvento(
     ZonaHorariaEntrada: Optional[str] = None,
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
-    Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
+    UsuarioActual: Usuario = Depends(get_current_user),
 ):
-    ini_utc = _a_utc_naive(Datos.Inicio, ZonaHorariaEntrada)
-    fin_utc = _a_utc_naive(Datos.Fin, ZonaHorariaEntrada)
-    Entidad = Eventos.CrearEvento(
-        SesionBD,
-        MetaId=Datos.MetaId,
-        PropietarioId=Datos.PropietarioId,
-        Titulo=Datos.Titulo,
-        Inicio=ini_utc,
-        Fin=fin_utc,
-        Descripcion=Datos.Descripcion,
-        Ubicacion=Datos.Ubicacion,
-        FrecuenciaRepeticion=Datos.FrecuenciaRepeticion,
-        IntervaloRepeticion=Datos.IntervaloRepeticion,
-        DiasSemana=Datos.DiasSemana,
-        Rol=Rol,
-    )
+    if Datos.PropietarioId != UsuarioActual.Id:
+        raise HTTPException(status_code=403, detail="EventoInvalido: PropietarioId debe coincidir con el usuario autenticado")
+    ini_utc = _a_utc_naive(Datos.Inicio, ZonaHorariaEntrada, UsuarioActual.ZonaHoraria)
+    fin_utc = _a_utc_naive(Datos.Fin, ZonaHorariaEntrada, UsuarioActual.ZonaHoraria)
+    try:
+        Entidad = Eventos.CrearEvento(
+            SesionBD,
+            MetaId=Datos.MetaId,
+            PropietarioId=UsuarioActual.Id,
+            Titulo=Datos.Titulo,
+            Inicio=ini_utc,
+            Fin=fin_utc,
+            Descripcion=Datos.Descripcion,
+            Ubicacion=Datos.Ubicacion,
+            FrecuenciaRepeticion=Datos.FrecuenciaRepeticion,
+            IntervaloRepeticion=Datos.IntervaloRepeticion,
+            DiasSemana=Datos.DiasSemana,
+            SolicitanteId=UsuarioActual.Id,
+        )
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="EventoInvalido: Meta/Propietario inexistentes, rol no permitido o rango de tiempo")
     tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
@@ -197,34 +212,50 @@ def ActualizarEvento(
     ZonaHorariaEntrada: Optional[str] = None,
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
-    Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
+    UsuarioActual: Usuario = Depends(get_current_user),
 ):
-    ini_utc = _a_utc_naive(Cambios.Inicio, ZonaHorariaEntrada) if Cambios.Inicio is not None else None
-    fin_utc = _a_utc_naive(Cambios.Fin, ZonaHorariaEntrada) if Cambios.Fin is not None else None
-    Entidad = Eventos.ActualizarEvento(
-        SesionBD,
-        Id,
-        Titulo=Cambios.Titulo,
-        Descripcion=Cambios.Descripcion,
-        Inicio=ini_utc,
-        Fin=fin_utc,
-        Ubicacion=Cambios.Ubicacion,
-        FrecuenciaRepeticion=Cambios.FrecuenciaRepeticion,
-        IntervaloRepeticion=Cambios.IntervaloRepeticion,
-        DiasSemana=Cambios.DiasSemana,
-        Rol=Rol,
+    ini_utc = (
+        _a_utc_naive(Cambios.Inicio, ZonaHorariaEntrada, UsuarioActual.ZonaHoraria)
+        if Cambios.Inicio is not None
+        else None
     )
+    fin_utc = (
+        _a_utc_naive(Cambios.Fin, ZonaHorariaEntrada, UsuarioActual.ZonaHoraria)
+        if Cambios.Fin is not None
+        else None
+    )
+    try:
+        Entidad = Eventos.ActualizarEvento(
+            SesionBD,
+            Id,
+            Titulo=Cambios.Titulo,
+            Descripcion=Cambios.Descripcion,
+            Inicio=ini_utc,
+            Fin=fin_utc,
+            Ubicacion=Cambios.Ubicacion,
+            FrecuenciaRepeticion=Cambios.FrecuenciaRepeticion,
+            IntervaloRepeticion=Cambios.IntervaloRepeticion,
+            DiasSemana=Cambios.DiasSemana,
+            SolicitanteId=UsuarioActual.Id,
+        )
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="EventoInvalido: no encontrado, eliminado o rango de tiempo invalido")
     return Entidad
 
 
 @Router.delete("/eventos/{Id}")
-def EliminarEvento(Id: int, Rol: RolParticipante = RolParticipante.Dueno, SesionBD: Session = Depends(ObtenerSesion)):
-    Exito = Eventos.EliminarEvento(SesionBD, Id, Rol=Rol)
+def EliminarEvento(Id: int, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
+    try:
+        Exito = Eventos.EliminarEvento(SesionBD, Id, SolicitanteId=UsuarioActual.Id)
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
     if not Exito:
-        raise HTTPException(status_code=403, detail="No permitido o evento no encontrado")
+        raise HTTPException(status_code=404, detail="Evento no encontrado o ya eliminado")
     return {"ok": True}
 
 
@@ -234,8 +265,14 @@ def RecuperarEvento(
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
     SesionBD: Session = Depends(ObtenerSesion),
+    UsuarioActual: Usuario = Depends(get_current_user),
 ):
-    Entidad = Eventos.RecuperarEvento(SesionBD, Id)
+    try:
+        Entidad = Eventos.RecuperarEvento(SesionBD, Id, SolicitanteId=UsuarioActual.Id)
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="No se puede recuperar (evento inexistente o Meta eliminada)")
     tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)
@@ -275,21 +312,26 @@ def CrearRecordatorio(
     ZonaHorariaEntrada: Optional[str] = None,
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
-    Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
+    UsuarioActual: Usuario = Depends(get_current_user),
 ):
-    fh_utc = _a_utc_naive(Datos.FechaHora, ZonaHorariaEntrada)
-    Entidad = Recordatorios.CrearRecordatorio(
-        SesionBD,
-        EventoId=Datos.EventoId,
-        FechaHora=fh_utc,
-        Canal=Datos.Canal,
-        Mensaje=Datos.Mensaje,
-        FrecuenciaRepeticion=Datos.FrecuenciaRepeticion,
-        IntervaloRepeticion=Datos.IntervaloRepeticion,
-        DiasSemana=Datos.DiasSemana,
-        Rol=Rol,
-    )
+    fh_utc = _a_utc_naive(Datos.FechaHora, ZonaHorariaEntrada, UsuarioActual.ZonaHoraria)
+    try:
+        Entidad = Recordatorios.CrearRecordatorio(
+            SesionBD,
+            EventoId=Datos.EventoId,
+            FechaHora=fh_utc,
+            Canal=Datos.Canal,
+            Mensaje=Datos.Mensaje,
+            FrecuenciaRepeticion=Datos.FrecuenciaRepeticion,
+            IntervaloRepeticion=Datos.IntervaloRepeticion,
+            DiasSemana=Datos.DiasSemana,
+            SolicitanteId=UsuarioActual.Id,
+        )
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="RecordatorioInvalido: evento inexistente/eliminado, rol no permitido o fecha pasada")
     return Entidad
@@ -322,32 +364,44 @@ def ActualizarRecordatorio(
     ZonaHorariaEntrada: Optional[str] = None,
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
-    Rol: RolParticipante = RolParticipante.Dueno,
     SesionBD: Session = Depends(ObtenerSesion),
+    UsuarioActual: Usuario = Depends(get_current_user),
 ):
-    fh_utc = _a_utc_naive(Cambios.FechaHora, ZonaHorariaEntrada) if Cambios.FechaHora is not None else None
-    Entidad = Recordatorios.ActualizarRecordatorio(
-        SesionBD,
-        Id,
-        FechaHora=fh_utc,
-        Canal=Cambios.Canal,
-        Enviado=Cambios.Enviado,
-        Mensaje=Cambios.Mensaje,
-        FrecuenciaRepeticion=Cambios.FrecuenciaRepeticion,
-        IntervaloRepeticion=Cambios.IntervaloRepeticion,
-        DiasSemana=Cambios.DiasSemana,
-        Rol=Rol,
+    fh_utc = (
+        _a_utc_naive(Cambios.FechaHora, ZonaHorariaEntrada, UsuarioActual.ZonaHoraria)
+        if Cambios.FechaHora is not None
+        else None
     )
+    try:
+        Entidad = Recordatorios.ActualizarRecordatorio(
+            SesionBD,
+            Id,
+            FechaHora=fh_utc,
+            Canal=Cambios.Canal,
+            Enviado=Cambios.Enviado,
+            Mensaje=Cambios.Mensaje,
+            FrecuenciaRepeticion=Cambios.FrecuenciaRepeticion,
+            IntervaloRepeticion=Cambios.IntervaloRepeticion,
+            DiasSemana=Cambios.DiasSemana,
+            SolicitanteId=UsuarioActual.Id,
+        )
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="RecordatorioInvalido: no encontrado/eliminado o fecha/rol invalidos")
     return Entidad
 
 
 @Router.delete("/recordatorios/{Id}")
-def EliminarRecordatorio(Id: int, Rol: RolParticipante = RolParticipante.Dueno, SesionBD: Session = Depends(ObtenerSesion)):
-    Exito = Recordatorios.EliminarRecordatorio(SesionBD, Id, Rol=Rol)
+def EliminarRecordatorio(Id: int, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
+    try:
+        Exito = Recordatorios.EliminarRecordatorio(SesionBD, Id, SolicitanteId=UsuarioActual.Id)
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
     if not Exito:
-        raise HTTPException(status_code=403, detail="No permitido o recordatorio no encontrado")
+        raise HTTPException(status_code=404, detail="Recordatorio no encontrado o ya eliminado")
     return {"ok": True}
 
 
@@ -357,8 +411,14 @@ def RecuperarRecordatorio(
     UsuarioId: Optional[int] = None,
     ZonaHoraria: Optional[str] = None,
     SesionBD: Session = Depends(ObtenerSesion),
+    UsuarioActual: Usuario = Depends(get_current_user),
 ):
-    Entidad = Recordatorios.RecuperarRecordatorio(SesionBD, Id)
+    try:
+        Entidad = Recordatorios.RecuperarRecordatorio(SesionBD, Id, SolicitanteId=UsuarioActual.Id)
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="No se puede recuperar (recordatorio inexistente o Evento eliminado)")
     tz = _obtener_tz(SesionBD, UsuarioId, ZonaHoraria)

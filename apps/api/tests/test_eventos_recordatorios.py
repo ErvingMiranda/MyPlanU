@@ -1,7 +1,18 @@
 from fastapi.exceptions import ResponseValidationError
 from fastapi.testclient import TestClient
+from sqlmodel import Session
+import sys
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+sys.path.append(str(BASE_DIR / 'apps' / 'api'))
+
 from app.main import Aplicacion
-from app.core.Database import IniciarTablas
+from app.core.Database import ObtenerEngine
+from app.models.Evento import Evento, Recordatorio
+from app.models.Goal import Meta
+from app.services.ParticipantesService import ParticipantesService
+from app.core.Permisos import RolParticipante
 
 client = TestClient(Aplicacion)
 
@@ -36,10 +47,10 @@ def crear_usuario(correo: str, nombre: str, contrasena: str = "Secreto123"):
     return registrar_usuario_y_autorizar(correo, nombre, contrasena)
 
 
-def crear_meta(propietario_id: int, headers, titulo: str = "Meta X"):
+def crear_meta(propietario_id: int, headers, titulo: str = "Meta X", tipo: str = "Individual"):
     r = client.post(
         "/metas",
-        json={"PropietarioId": propietario_id, "Titulo": titulo, "TipoMeta": "Individual"},
+        json={"PropietarioId": propietario_id, "Titulo": titulo, "TipoMeta": tipo},
         headers=headers,
     )
     return r
@@ -83,6 +94,13 @@ def crear_recordatorio(payload: dict, headers):
         return recordatorio
     assert r.status_code == 201, r.text
     return r.json()
+
+
+def agregar_colaborador_evento(evento_id: int, usuario_id: int, rol: RolParticipante = RolParticipante.Colaborador):
+    with Session(ObtenerEngine()) as sesion:
+        svc = ParticipantesService()
+        resultado = svc.AgregarParticipante(sesion, evento_id, usuario_id, rol)
+        assert resultado is not None, "No se pudo agregar participante de prueba"
 
 
 def test_meta_invalida():
@@ -208,4 +226,147 @@ def test_recordatorio_dias_semana_persistencia():
     }
     data = crear_recordatorio(rec_payload, headers)
     assert data["DiasSemana"] == ["Lun","Mie"]
+
+
+def test_colaborador_actualiza_pero_no_elimina_evento():
+    dueno, headers_dueno = crear_usuario("dueno@example.com", "Dueno")
+    meta_resp = crear_meta(dueno["Id"], headers_dueno, titulo="Meta Colab")
+    meta_id = meta_resp.json()["Id"]
+    evento = crear_evento({
+        "MetaId": meta_id,
+        "PropietarioId": dueno["Id"],
+        "Titulo": "Evento Colaborativo",
+        "Inicio": "2030-05-01T10:00:00",
+        "Fin": "2030-05-01T11:00:00"
+    }, headers_dueno)
+    evento_id = evento["Id"]
+    colaborador, headers_colab = crear_usuario("colab@example.com", "Colab")
+    agregar_colaborador_evento(evento_id, colaborador["Id"])
+
+    r_update = client.patch(
+        f"/eventos/{evento_id}",
+        json={"Titulo": "Evento Editado"},
+        headers=headers_colab,
+    )
+    assert r_update.status_code == 200, r_update.text
+    assert r_update.json()["Titulo"] == "Evento Editado"
+
+    r_delete_colab = client.delete(f"/eventos/{evento_id}", headers=headers_colab)
+    assert r_delete_colab.status_code == 403, r_delete_colab.text
+
+    r_delete_dueno = client.delete(f"/eventos/{evento_id}", headers=headers_dueno)
+    assert r_delete_dueno.status_code == 200, r_delete_dueno.text
+
+
+def test_eliminar_meta_cascada_eventos_recordatorios():
+    usuario, headers = crear_usuario("cascade@example.com", "Cascade")
+    meta_resp = crear_meta(usuario["Id"], headers, titulo="Meta Cascada")
+    meta_id = meta_resp.json()["Id"]
+    evento = crear_evento({
+        "MetaId": meta_id,
+        "PropietarioId": usuario["Id"],
+        "Titulo": "Evento Cascada",
+        "Inicio": "2031-01-01T08:00:00",
+        "Fin": "2031-01-01T09:00:00"
+    }, headers)
+    evento_id = evento["Id"]
+    rec = crear_recordatorio({
+        "EventoId": evento_id,
+        "FechaHora": "2031-01-01T07:30:00",
+        "Canal": "Local"
+    }, headers)
+    rec_id = rec["Id"]
+
+    r_del = client.delete(f"/metas/{meta_id}", headers=headers)
+    assert r_del.status_code == 200, r_del.text
+
+    with Session(ObtenerEngine()) as sesion:
+        evento_db = sesion.get(Evento, evento_id)
+        assert evento_db is not None and evento_db.EliminadoEn is not None
+        rec_db = sesion.get(Recordatorio, rec_id)
+        assert rec_db is not None and rec_db.EliminadoEn is not None
+
+
+def test_meta_colectiva_requiere_colaborador():
+    dueno, headers_dueno = crear_usuario("colectiva@example.com", "Owner")
+    meta_resp = crear_meta(dueno["Id"], headers_dueno, titulo="Meta Colectiva", tipo="Colectiva")
+    meta_id = meta_resp.json()["Id"]
+
+    r_del_fail = client.delete(f"/metas/{meta_id}", headers=headers_dueno)
+    assert r_del_fail.status_code == 409, r_del_fail.text
+
+    evento = crear_evento({
+        "MetaId": meta_id,
+        "PropietarioId": dueno["Id"],
+        "Titulo": "Evento Compartido",
+        "Inicio": "2032-02-02T10:00:00",
+        "Fin": "2032-02-02T11:00:00"
+    }, headers_dueno)
+    colaborador, headers_colab = crear_usuario("colab2@example.com", "Colab2")
+    agregar_colaborador_evento(evento["Id"], colaborador["Id"])
+
+    r_del_ok = client.delete(f"/metas/{meta_id}", headers=headers_dueno)
+    assert r_del_ok.status_code == 200, r_del_ok.text
+
+    with Session(ObtenerEngine()) as sesion:
+        meta_db = sesion.get(Meta, meta_id)
+        assert meta_db is not None and meta_db.EliminadoEn is not None
+        evento_db = sesion.get(Evento, evento["Id"])
+        assert evento_db is not None and evento_db.EliminadoEn is not None
+
+
+def test_bitacora_registra_recuperacion_meta():
+    usuario, headers = crear_usuario("audit@example.com", "Audit")
+    r_meta = crear_meta(usuario["Id"], headers, titulo="Meta Audit")
+    meta_id = r_meta.json()["Id"]
+    r_delete = client.delete(f"/metas/{meta_id}", headers=headers)
+    assert r_delete.status_code == 200
+    r_recuperar = client.post(f"/metas/{meta_id}/recuperar", headers=headers)
+    assert r_recuperar.status_code == 200
+
+    r_bitacora = client.get("/bitacora/recuperaciones", headers=headers)
+    assert r_bitacora.status_code == 200
+    registros = r_bitacora.json()
+    assert any(reg["TipoEntidad"] == "Meta" and reg["EntidadId"] == meta_id for reg in registros)
+    for reg in registros:
+        if reg["EntidadId"] == meta_id:
+            assert reg["UsuarioId"] == usuario["Id"]
+            break
+
+
+def test_notificaciones_evento_eliminado_para_participantes():
+    dueno, headers_dueno = crear_usuario("notif-owner@example.com", "Owner")
+    colab, headers_colab = crear_usuario("notif-colab@example.com", "Colab")
+
+    r_meta = crear_meta(dueno["Id"], headers_dueno, titulo="Meta Noti")
+    meta_id = r_meta.json()["Id"]
+    evento_payload = {
+        "MetaId": meta_id,
+        "PropietarioId": dueno["Id"],
+        "Titulo": "Evento Notificado",
+        "Inicio": "2031-01-10T09:00:00",
+        "Fin": "2031-01-10T10:00:00",
+    }
+    evento = crear_evento(evento_payload, headers_dueno)
+    assert evento["Id"]
+
+    r_participante = client.post(
+        f"/eventos/{evento['Id']}/participantes",
+        params={"UsuarioId": colab["Id"], "Rol": RolParticipante.Colaborador.value},
+        headers=headers_dueno,
+    )
+    assert r_participante.status_code == 200
+
+    r_delete = client.delete(f"/eventos/{evento['Id']}", headers=headers_dueno)
+    assert r_delete.status_code == 200
+
+    r_notif_colab = client.get("/notificaciones/sistema", headers=headers_colab)
+    assert r_notif_colab.status_code == 200
+    notif_colab = r_notif_colab.json()
+    assert any(n["Tipo"] == "EventoEliminado" and n["ReferenciaId"] == evento["Id"] for n in notif_colab)
+
+    r_notif_dueno = client.get("/notificaciones/sistema", headers=headers_dueno)
+    assert r_notif_dueno.status_code == 200
+    notif_dueno = r_notif_dueno.json()
+    assert any(n["Tipo"] == "EventoEliminado" and n["ReferenciaId"] == evento["Id"] for n in notif_dueno)
 
