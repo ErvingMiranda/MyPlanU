@@ -4,7 +4,7 @@ import { showSuccess, showError, showRetry } from '../ui/toast';
 import { logEvent } from '../telemetry';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Evento, RecuperarEvento } from '../api/ClienteApi';
+import { Evento, RecuperarEvento, ObtenerParticipantesEvento, type ParticipanteEvento } from '../api/ClienteApi';
 
 type Parametros = { DetalleEvento: { evento: Evento } };
 
@@ -12,12 +12,42 @@ export default function DetalleEventoScreen(): React.ReactElement {
   const ruta = useRoute<RouteProp<Parametros, 'DetalleEvento'>>();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const evento = ruta.params?.evento;
+  const [participantes, setParticipantes] = React.useState<ParticipanteEvento[]>([]);
+  const [cargandoParticipantes, setCargandoParticipantes] = React.useState(false);
+  const [errorParticipantes, setErrorParticipantes] = React.useState<string | null>(null);
 
   if (!evento) {
     return (
       <View style={Estilos.Contenedor}><Text>No se encontro el evento.</Text></View>
     );
   }
+
+  React.useEffect(() => {
+    let activo = true;
+    async function cargar() {
+      if (!evento) return;
+      setCargandoParticipantes(true);
+      setErrorParticipantes(null);
+      try {
+        const data = await ObtenerParticipantesEvento(evento.Id);
+        if (activo) {
+          setParticipantes(data);
+        }
+      } catch (e: any) {
+        if (activo) {
+          const mensaje = e?.message ?? 'No se pudieron cargar participantes';
+          setErrorParticipantes(mensaje);
+          showError(mensaje);
+        }
+      } finally {
+        if (activo) setCargandoParticipantes(false);
+      }
+    }
+    cargar();
+    return () => {
+      activo = false;
+    };
+  }, [evento?.Id]);
 
   return (
     <View style={Estilos.Contenedor}>
@@ -34,9 +64,18 @@ export default function DetalleEventoScreen(): React.ReactElement {
       ) : (
         <>
           <Text style={Estilos.Subtitulo}>Participantes</Text>
-      {/* TODO: Reemplazar mock por datos reales desde API /eventos/{id}/participantes */}
-      <View style={Estilos.ParticipanteItem}><Text>Dueno: usuario@ejemplo.com</Text></View>
-      <View style={Estilos.ParticipanteItem}><Text>Colaborador: colab@equipo.com</Text></View>
+      {cargandoParticipantes ? (
+        <Text style={Estilos.Campo}>Cargando participantes...</Text>
+      ) : participantes.length === 0 ? (
+        <Text style={Estilos.Campo}>Sin participantes registrados.</Text>
+      ) : (
+        participantes.map((p) => (
+          <View key={p.Id} style={Estilos.ParticipanteItem}>
+            <Text>{p.Rol}: Usuario #{p.UsuarioId}</Text>
+          </View>
+        ))
+      )}
+      {errorParticipantes ? <Text style={[Estilos.Campo, { color: 'red' }]}>{errorParticipantes}</Text> : null}
       <View style={{ height: 8 }} />
       <Button title="AgregarParticipante" onPress={() => {/* placeholder */}} />
       <View style={{ height: 12 }} />

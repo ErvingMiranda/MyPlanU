@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlmodel import Session, select
 
 from app.models.Goal import Usuario
+from app.models.Evento import ParticipanteEvento
 
 
 class UsuariosService:
@@ -53,8 +54,16 @@ class UsuariosService:
         Entidad = SesionBD.get(Usuario, Id)
         if not Entidad or Entidad.EliminadoEn is not None:
             return False
-        Entidad.EliminadoEn = datetime.utcnow()
+        fecha = datetime.utcnow()
+        Entidad.EliminadoEn = fecha
         SesionBD.add(Entidad)
+        from app.services.MetasService import MetasService  # import tardio para evitar ciclo
+
+        metas = MetasService()
+        metas.CascadaPorUsuario(SesionBD, Id, fecha)
+        ConsultaParticipantes = select(ParticipanteEvento).where(ParticipanteEvento.UsuarioId == Id)
+        for participante in SesionBD.exec(ConsultaParticipantes):
+            SesionBD.delete(participante)
         SesionBD.commit()
         return True
 

@@ -17,6 +17,12 @@ export async function ObtenerEventos(UsuarioId?: number): Promise<Evento[]> {
   return fetchJson<Evento[]>(`${ApiUrl}/eventos${q ? `?${q}` : ''}`, undefined, 'Error al cargar eventos');
 }
 
+export type ParticipanteEvento = { Id: number; EventoId: number; UsuarioId: number; Rol: string; CreadoEn: string };
+
+export async function ObtenerParticipantesEvento(EventoId: number): Promise<ParticipanteEvento[]> {
+  return fetchJson<ParticipanteEvento[]>(`${ApiUrl}/eventos/${EventoId}/participantes`, undefined, 'Error al cargar participantes');
+}
+
 // Nuevos contratos JSON
 export type CrearEventoBody = { MetaId: number; PropietarioId: number; Titulo: string; Descripcion?: string | null; Inicio: string; Fin: string; Ubicacion?: string | null; Repeticion?: { Frecuencia?: string | null; Intervalo?: number | null; DiasSemana?: string[] | null } ; ZonaHorariaEntrada?: string; UsuarioId?: number };
 export type ActualizarEventoBody = Partial<Omit<CrearEventoBody,'MetaId'|'PropietarioId'>> & { ZonaHorariaEntrada?: string; UsuarioId?: number };
@@ -100,6 +106,21 @@ export async function RecuperarRecordatorio(Id: number, UsuarioId?: number): Pro
   if (zona) params.append('ZonaHoraria', zona);
   const q = params.toString();
   return fetchJson<Recordatorio>(`${ApiUrl}/recordatorios/${Id}/recuperar${q ? `?${q}` : ''}`, { method: 'POST' }, 'No se pudo recuperar recordatorio');
+}
+
+export type NotificacionSistema = { Id: number; UsuarioId: number; Tipo: string; ReferenciaId: number; Mensaje: string; CreadoEn: string; LeidaEn?: string | null };
+
+export async function ObtenerNotificacionesSistema(opciones?: { soloNoLeidas?: boolean }): Promise<NotificacionSistema[]> {
+  const params = new URLSearchParams();
+  if (opciones?.soloNoLeidas === false) {
+    params.append('SoloNoLeidas', 'false');
+  }
+  const query = params.toString();
+  return fetchJson<NotificacionSistema[]>(`${ApiUrl}/notificaciones/sistema${query ? `?${query}` : ''}`, undefined, 'Error al cargar notificaciones');
+}
+
+export async function MarcarNotificacionLeida(Id: number): Promise<void> {
+  await fetchJson(`${ApiUrl}/notificaciones/${Id}/leer`, { method: 'POST' }, 'Error al marcar notificacion');
 }
 
 export async function ObtenerMetasEliminadas(params?: { PropietarioId?: number; Desde?: string; Hasta?: string; UsuarioId?: number }): Promise<Meta[]> {

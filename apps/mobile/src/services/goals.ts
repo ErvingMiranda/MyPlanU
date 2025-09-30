@@ -1,6 +1,7 @@
 import { http } from '../api/http';
 import { mapHttpError, type HttpError } from '../api/errors';
 import { getCachedMetas, setCachedMetas, enqueue } from '../offline';
+import { getSessionUserId } from '../auth/session';
 
 export const GOAL_TYPES = ['Individual', 'Colectiva'] as const;
 export type GoalType = typeof GOAL_TYPES[number];
@@ -21,7 +22,7 @@ export type Goal = {
 };
 
 export type CreateGoal = {
-  PropietarioId: number;
+  PropietarioId?: number;
   Titulo: string;
   TipoMeta: GoalType;
   Descripcion?: string | null;
@@ -55,7 +56,11 @@ export async function getGoal(Id: number): Promise<Goal> {
 
 export async function createGoal(datos: CreateGoal): Promise<Goal> {
   try {
-    const payload = { ...datos, TipoMeta: normalizeGoalType(datos.TipoMeta) };
+    const ownerId = datos.PropietarioId ?? (await getSessionUserId());
+    if (!ownerId) {
+      throw { code: 403, message: 'No se encontró la sesión activa.' } as HttpError;
+    }
+    const payload = { ...datos, PropietarioId: ownerId, TipoMeta: normalizeGoalType(datos.TipoMeta) };
     const r = await http.post(`/metas`, payload); // JSON body
     return r.data as Goal;
   } catch (e) {
@@ -64,10 +69,11 @@ export async function createGoal(datos: CreateGoal): Promise<Goal> {
       // optimistic local create with temp Id (negative)
       const tempId = -Math.floor(Math.random() * 1_000_000) - 1;
       const now = new Date().toISOString();
-      const optimistic: Goal = { Id: tempId, PropietarioId: datos.PropietarioId, Titulo: datos.Titulo, TipoMeta: payload.TipoMeta, Descripcion: datos.Descripcion ?? null, CreadoEn: now } as any;
+      const ownerId = datos.PropietarioId ?? (await getSessionUserId());
+      const optimistic: Goal = { Id: tempId, PropietarioId: ownerId ?? -1, Titulo: datos.Titulo, TipoMeta: normalizeGoalType(datos.TipoMeta), Descripcion: datos.Descripcion ?? null, CreadoEn: now } as any;
       const cached = (await getCachedMetas()) ?? [];
       await setCachedMetas([optimistic as any, ...cached]);
-      await enqueue({ kind: 'create', entity: 'Meta', tempId, payload });
+      await enqueue({ kind: 'create', entity: 'Meta', tempId, payload: { ...datos, PropietarioId: optimistic.PropietarioId } });
       return optimistic;
     }
     throw err;

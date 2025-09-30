@@ -6,6 +6,7 @@ from sqlmodel import Session
 from app.core.Database import ObtenerSesion, IniciarTablas
 from app.services.UsuariosService import UsuariosService
 from app.services.MetasService import MetasService
+from app.services.exceptions import PermisoDenegadoError, ReglaNegocioError
 from app.schemas import MetaCrear, MetaActualizar, MetaRespuesta
 from app.views.AuthView import get_current_user
 from app.models.Goal import Usuario
@@ -75,13 +76,19 @@ def ListarMetas(SesionBD: Session = Depends(ObtenerSesion)):
 @Router.post("/metas", response_model=MetaRespuesta, status_code=201)
 def CrearMeta(MetaIn: MetaCrear, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
     # Forzar PropietarioId al usuario autenticado
-    Entidad = Metas.CrearMeta(
-        SesionBD,
-        PropietarioId=UsuarioActual.Id,
-        Titulo=MetaIn.Titulo,
-        TipoMeta=MetaIn.TipoMeta,
-        Descripcion=MetaIn.Descripcion,
-    )
+    try:
+        Entidad = Metas.CrearMeta(
+            SesionBD,
+            PropietarioId=UsuarioActual.Id,
+            Titulo=MetaIn.Titulo,
+            TipoMeta=MetaIn.TipoMeta,
+            Descripcion=MetaIn.Descripcion,
+            SolicitanteId=UsuarioActual.Id,
+        )
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="MetaInvalida: PropietarioId inexistente o usuario no existe")
     return Entidad
@@ -97,16 +104,19 @@ def ObtenerMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion)):
 
 @Router.patch("/metas/{Id}", response_model=MetaRespuesta)
 def ActualizarMeta(Id: int, Cambios: MetaActualizar, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
-    EntidadExistente = Metas.Obtener(SesionBD, Id)
-    if not EntidadExistente or EntidadExistente.PropietarioId != UsuarioActual.Id:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    Entidad = Metas.ActualizarMeta(
-        SesionBD,
-        Id,
-        Titulo=Cambios.Titulo,
-        Descripcion=Cambios.Descripcion,
-        TipoMeta=Cambios.TipoMeta,
-    )
+    try:
+        Entidad = Metas.ActualizarMeta(
+            SesionBD,
+            Id,
+            Titulo=Cambios.Titulo,
+            Descripcion=Cambios.Descripcion,
+            TipoMeta=Cambios.TipoMeta,
+            SolicitanteId=UsuarioActual.Id,
+        )
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=404, detail="MetaInvalida: no encontrada o eliminada")
     return Entidad
@@ -114,10 +124,12 @@ def ActualizarMeta(Id: int, Cambios: MetaActualizar, SesionBD: Session = Depends
 
 @Router.delete("/metas/{Id}")
 def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
-    EntidadExistente = Metas.Obtener(SesionBD, Id)
-    if not EntidadExistente or EntidadExistente.PropietarioId != UsuarioActual.Id:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    Exito = Metas.EliminarMeta(SesionBD, Id)
+    try:
+        Exito = Metas.EliminarMeta(SesionBD, Id, SolicitanteId=UsuarioActual.Id)
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if not Exito:
         raise HTTPException(status_code=404, detail="MetaInvalida: no encontrada o ya eliminada")
     return {"ok": True}
@@ -125,10 +137,12 @@ def EliminarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion), UsuarioAct
 
 @Router.post("/metas/{Id}/recuperar")
 def RecuperarMeta(Id: int, SesionBD: Session = Depends(ObtenerSesion), UsuarioActual: Usuario = Depends(get_current_user)):
-    EntidadExistente = Metas.Obtener(SesionBD, Id)
-    if not EntidadExistente or EntidadExistente.PropietarioId != UsuarioActual.Id:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    Entidad = Metas.RecuperarMeta(SesionBD, Id)
+    try:
+        Entidad = Metas.RecuperarMeta(SesionBD, Id, SolicitanteId=UsuarioActual.Id)
+    except PermisoDenegadoError as exc:
+        raise HTTPException(status_code=403, detail=exc.detalle)
+    except ReglaNegocioError as exc:
+        raise HTTPException(status_code=409, detail=exc.detalle)
     if Entidad is None:
         raise HTTPException(status_code=400, detail="MetaInvalida: no se puede recuperar (inexistente o activa)")
     return Entidad

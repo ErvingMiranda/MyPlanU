@@ -1,5 +1,5 @@
 # MyPlanU
-MyPlanU v0.16.1 (en desarrollo)
+MyPlanU v0.18.0 (en desarrollo)
 =================
 
 Descripcion
@@ -346,12 +346,9 @@ Notas sobre Zonas Horarias:
 
 TODOs siguientes (planeados)
 ----------------------------
-- Permisos por rol: Dueno, Colaborador, Lector (validacion en Services).
-- Cascada logica: al eliminar Meta, propagar a Eventos y Recordatorios.
-- Persistencia real en Crear/Editar Meta desde movil.
-- Manejo de autenticacion real en Login/Registro.
-- Organización del código: revisar espaciados, consistencia de formato y separación visual para mejorar legibilidad.
-- IP / conectividad móvil: garantizar acceso desde dispositivo físico (Expo LAN) con autenticación y servicios funcionando sobre la IP configurada.
+- Endpoints batch para la cola offline (v0.19.0).
+- Integrar Expo Notifications con la sincronización offline/online.
+- Documentar y limpiar los flujos offline (formato y organización de código).
 
 v0.15.1 (Hardening repetición y pruebas)
 - Backend:
@@ -475,20 +472,27 @@ v0.16.1 (Ajustes post-autenticación)
   - Pantalla Crear/Editar Meta reemplaza el campo libre de tipo por un selector accesible entre "Individual" y "Colectiva".
   - `services/goals` normaliza `TipoMeta`, limita los valores permitidos y reutiliza la constante `GOAL_TYPES` en UI y capa offline.
 
-Próximas versiones planificadas
--------------------------------
-
 v0.17.0 (Permisos y cascadas básicas)
-- Reglas de permiso aplicadas en Servicios de Metas/Eventos/Recordatorios con validación por rol.
-- Comportamiento de cascada definido para borrar Metas y Usuarios, incluyendo validación de Metas colectivas.
-- Ajustes en app móvil para mostrar errores de autorización y estados de cascada.
-- Documentación y datos de prueba alineados con los roles.
+- Backend:
+  - Los servicios de Metas, Eventos y Recordatorios validan los permisos según el rol real del solicitante e informan errores 403/409 coherentes.
+  - El borrado de Metas aplica cascada lógica a Eventos y Recordatorios; eliminar Usuarios también marca sus recursos asociados y limpia participaciones.
+  - Las Metas "Colectiva" sólo se pueden cerrar si existe al menos un colaborador activo registrado en la meta.
+- Móvil:
+  - El cliente guarda el `userId` decodificando el JWT para enviar `PropietarioId` correcto y mostrar mensajes de autorización desde la API.
+  - Las pantallas Detalle/Crear Meta muestran errores de permisos con toasts consistentes.
+- Calidad:
+  - Pruebas API cubren permisos de colaboradores y cascadas, documentando los nuevos flujos en este README.
 
 v0.18.0 (Auditoría y notificaciones)
-- Registro de acciones de recuperación en bitácora y notificaciones al eliminar eventos.
-- Correcciones de zona horaria en API.
-- App móvil consumiendo participantes reales y mostrando alertas locales.
-- Nuevas guías de monitoreo y pruebas automatizadas asociadas.
+- Backend:
+  - Se añade la tabla `BitacoraRecuperacion` y se registran automáticamente todas las recuperaciones de metas, eventos y recordatorios.
+  - El borrado de eventos crea notificaciones para dueño y participantes, además de ajustar las conversiones de zona horaria usando la zona del usuario autenticado como fallback.
+  - Nuevos endpoints `/bitacora/recuperaciones` y `/notificaciones/sistema` con marcado de lectura.
+- Móvil:
+  - `DetalleEventoScreen` consume participantes reales desde la API y muestra estados de carga/errores.
+  - La app consulta periódicamente las notificaciones del backend y muestra alertas locales cuando hay eventos eliminados pendientes.
+- Documentación y calidad:
+  - Se publica la guía `docs/monitoring_auditoria.md` y se incorporan pruebas automatizadas para bitácora y notificaciones.
 
 v0.19.0 (Experiencia móvil y sincronización)
 - Endpoints complementarios para la cola offline en backend.

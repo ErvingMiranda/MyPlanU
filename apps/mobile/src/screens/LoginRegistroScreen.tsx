@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Button, StyleSheet, TextInput } from 'react-native';
 import { http } from '../api/http';
-import { setAuthToken } from '../api/http';
+import { storeAuthSession } from '../auth/session';
 import { showError, showSuccess } from '../ui/toast';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -20,12 +20,12 @@ export default function LoginRegistroScreen({ navigation }: Props): React.ReactE
       if (Modo === 'registro') {
         const r = await http.post('/auth/registro', { Correo, Nombre, Contrasena });
         const token = r.data.access_token;
-        await setAuthToken(token);
+        await storeAuthSession(token);
         showSuccess('Registrado');
       } else {
         const r = await http.post('/auth/login', { Correo, Contrasena });
         const token = r.data.access_token;
-        await setAuthToken(token);
+        await storeAuthSession(token);
         showSuccess('Sesión iniciada');
       }
       navigation.replace('HomeTabs');

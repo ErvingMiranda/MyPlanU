@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Button, Alert } from 'react-native';
 import { showError, showSuccess } from '../ui/toast';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Evento, CrearEvento, ActualizarEvento } from '../api/ClienteApi';
 import { ObtenerZonaHoraria } from '../userPrefs';
+import { getSessionUserId } from '../auth/session';
 
 type Parametros = { CrearEditarEvento: { evento?: Evento } };
 
@@ -16,6 +17,7 @@ export default function CrearEditarEventoScreen(): React.ReactElement {
   const [Titulo, EstablecerTitulo] = useState(EventoInicial?.Titulo ?? '');
   const [MetaId, EstablecerMetaId] = useState(String(EventoInicial?.MetaId ?? ''));
   const [PropietarioId, EstablecerPropietarioId] = useState(String(EventoInicial?.PropietarioId ?? ''));
+  const [UsuarioActualId, SetUsuarioActualId] = useState<number | null>(null);
   const [Inicio, EstablecerInicio] = useState(EventoInicial?.Inicio ?? '');
   const [Fin, EstablecerFin] = useState(EventoInicial?.Fin ?? '');
   const [Descripcion, EstablecerDescripcion] = useState(EventoInicial?.Descripcion ?? '');
@@ -27,6 +29,16 @@ export default function CrearEditarEventoScreen(): React.ReactElement {
     const fin = new Date(Fin).getTime();
     return ini < fin;
   };
+
+  useEffect(() => {
+    (async () => {
+      const uid = await getSessionUserId();
+      SetUsuarioActualId(uid);
+      if (!EventoInicial && uid != null) {
+        EstablecerPropietarioId(String(uid));
+      }
+    })();
+  }, [EventoInicial]);
 
   const Guardar = async () => {
     if (!ValidarFechas()) {
@@ -42,7 +54,7 @@ export default function CrearEditarEventoScreen(): React.ReactElement {
           Fin: Fin || undefined,
           Ubicacion: Ubicacion,
           ZonaHorariaEntrada: ObtenerZonaHoraria(),
-          UsuarioId: EventoInicial.PropietarioId,
+          UsuarioId: UsuarioActualId ?? EventoInicial.PropietarioId,
         });
   showSuccess(`Evento ${actualizado.Id} actualizado`);
         navigation.goBack();
@@ -50,20 +62,21 @@ export default function CrearEditarEventoScreen(): React.ReactElement {
         // Para crear se requieren MetaId y PropietarioId
         const metaId = parseInt(MetaId, 10);
         const propietarioId = parseInt(PropietarioId, 10);
+        const sessionId = UsuarioActualId ?? propietarioId;
         if (!metaId || !propietarioId || !Titulo || !Inicio || !Fin) {
           Alert.alert('Faltan datos', 'MetaId, PropietarioId, Titulo, Inicio y Fin son obligatorios');
           return;
         }
         const creado = await CrearEvento({
           MetaId: metaId,
-          PropietarioId: propietarioId,
+          PropietarioId: sessionId,
           Titulo,
           Descripcion: Descripcion || undefined,
           Inicio,
           Fin,
           Ubicacion: Ubicacion || undefined,
           ZonaHorariaEntrada: ObtenerZonaHoraria(),
-          UsuarioId: propietarioId,
+          UsuarioId: sessionId,
         } as any);
   showSuccess(`Evento ${creado.Id} creado`);
         navigation.goBack();

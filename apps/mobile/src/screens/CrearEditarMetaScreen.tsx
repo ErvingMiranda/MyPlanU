@@ -5,6 +5,7 @@ import { logEvent } from '../telemetry';
 import { createGoal, updateGoal, GOAL_TYPES, normalizeGoalType, type GoalType } from '../services/goals';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import { getSessionUserId } from '../auth/session';
 
 type Parametros = { CrearEditarMeta: { meta?: { Id: number; Titulo: string; TipoMeta: string; Descripcion?: string | null } } };
 
@@ -17,6 +18,7 @@ export default function CrearEditarMetaScreen(): React.ReactElement {
   const [TipoMeta, EstablecerTipoMeta] = useState<GoalType>(normalizeGoalType());
   const [Descripcion, EstablecerDescripcion] = useState('');
   const [Guardando, SetGuardando] = useState(false);
+  const [UsuarioId, SetUsuarioId] = useState<number | null>(null);
 
   React.useEffect(() => {
     if (meta) {
@@ -25,6 +27,15 @@ export default function CrearEditarMetaScreen(): React.ReactElement {
       EstablecerDescripcion(meta.Descripcion ?? '');
     }
   }, [meta]);
+
+  React.useEffect(() => {
+    (async () => {
+      const uid = await getSessionUserId();
+      SetUsuarioId(uid);
+    })();
+  }, []);
+
+  const puedeEditar = !meta || (UsuarioId != null && meta.PropietarioId === UsuarioId);
 
   const tiposMeta = useMemo(() => GOAL_TYPES, []);
 
@@ -55,7 +66,7 @@ export default function CrearEditarMetaScreen(): React.ReactElement {
       <Text>Descripcion</Text>
       <TextInput style={[Estilos.Input, { height: 80 }]} value={Descripcion} onChangeText={EstablecerDescripcion} multiline />
       <View style={Estilos.Acciones}>
-        <Button title={Guardando ? 'Guardando…' : meta ? 'Actualizar' : 'Guardar'} disabled={Guardando} onPress={async () => {
+        <Button title={Guardando ? 'Guardando…' : meta ? 'Actualizar' : 'Guardar'} disabled={Guardando || (!puedeEditar && !!meta)} onPress={async () => {
           try {
             if (!Titulo.trim()) { Alert.alert('Validación', 'El título es requerido'); return; }
             SetGuardando(true);
@@ -74,7 +85,11 @@ export default function CrearEditarMetaScreen(): React.ReactElement {
                 throw e;
               }
             } else {
-              await createGoal({ Titulo, TipoMeta, Descripcion, PropietarioId: 1 });
+              const ownerId = UsuarioId ?? (await getSessionUserId());
+              if (!ownerId) {
+                throw new Error('No se detectó la sesión activa.');
+              }
+              await createGoal({ Titulo, TipoMeta, Descripcion, PropietarioId: ownerId });
               showSuccess('Meta creada');
               logEvent('goal_save_success', { mode: 'create' });
             }
@@ -89,6 +104,9 @@ export default function CrearEditarMetaScreen(): React.ReactElement {
         }} />
         <Button title="Cancelar" onPress={() => navigation.goBack()} />
       </View>
+      {meta && !puedeEditar ? (
+        <Text style={{ color: '#b00', marginTop: 12 }}>No puedes editar esta meta porque pertenece a otro usuario.</Text>
+      ) : null}
     </View>
   );
 }
