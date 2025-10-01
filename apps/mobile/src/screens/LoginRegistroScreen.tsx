@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Button, StyleSheet, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { http, ping } from '../api/http';
+import { http, ping, getNetworkErrorMessage } from '../api/http';
 import { storeAuthSession } from '../auth/session';
 import { showError, showSuccess, showInfo } from '../ui/toast';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -45,7 +45,12 @@ export default function LoginRegistroScreen({ navigation }: Props): React.ReactE
       }
       navigation.replace('HomeTabs');
     } catch (e: any) {
-      showError(e?.response?.data?.detail || 'Error auth');
+      const detail = e?.response?.data?.detail;
+      if (detail) {
+        showError(detail);
+      } else {
+        showError(getNetworkErrorMessage(e));
+      }
     } finally {
       SetLoading(false);
     }
