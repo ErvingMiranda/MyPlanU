@@ -35,29 +35,18 @@ function TabsPrincipales(): React.ReactElement {
   );
 }
 
-import { hasAuthToken, getSessionUserId } from './src/auth/session';
+import { AuthProvider } from './src/auth/AuthContext';
+import { getSessionUserId } from './src/auth/session';
 import { ObtenerNotificacionesSistema, MarcarNotificacionLeida } from './src/api/ClienteApi';
 
-export default function AplicacionMovil(): React.ReactElement {
-  const [checking, setChecking] = React.useState(true);
-  const [authed, setAuthed] = React.useState(false);
-  // install interceptors once
-  React.useEffect(() => {
-    installAxiosInterceptors(http);
-    // try to process pending offline queue on startup
-    processPending(http).catch(() => {});
-    (async () => {
-      const tokenExists = await hasAuthToken();
-      setAuthed(tokenExists);
-      setChecking(false);
-    })();
-  }, []);
+function AppWithNavigation(): React.ReactElement {
+  const { isLoggedIn, isLoading } = useAuth();
 
   React.useEffect(() => {
     let cancelado = false;
     let intervalo: ReturnType<typeof setInterval> | undefined;
     const revisar = async () => {
-      if (!authed || cancelado) return;
+      if (!isLoggedIn || cancelado) return;
       try {
         const userId = await getSessionUserId();
         if (!userId) return;
@@ -74,7 +63,7 @@ export default function AplicacionMovil(): React.ReactElement {
         }
       }
     };
-    if (authed) {
+    if (isLoggedIn) {
       revisar();
       intervalo = setInterval(revisar, 15000);
     }
@@ -82,31 +71,43 @@ export default function AplicacionMovil(): React.ReactElement {
       cancelado = true;
       if (intervalo) clearInterval(intervalo);
     };
-  }, [authed]);
+  }, [isLoggedIn]);
+
+  if (isLoading) {
+    return null; // or a loading spinner
+  }
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!isLoggedIn ? (
+          <Stack.Screen name="LoginRegistro" component={LoginRegistroScreen} />
+        ) : (
+          <>
+            <Stack.Screen name="HomeTabs" component={TabsPrincipales} />
+            <Stack.Screen name="DetalleMeta" component={DetalleMetaScreen} options={{ title: 'Detalle de Meta' }} />
+            <Stack.Screen name="CrearEditarMeta" component={CrearEditarMetaScreen} options={{ title: 'Crear/Editar Meta' }} />
+            <Stack.Screen name="ListaEventos" component={ListaEventosScreen} options={{ title: 'Eventos' }} />
+            <Stack.Screen name="DetalleEvento" component={DetalleEventoScreen} options={{ title: 'Detalle de Evento' }} />
+            <Stack.Screen name="CrearEditarEvento" component={CrearEditarEventoScreen} options={{ title: 'Crear/Editar Evento' }} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export default function AplicacionMovil(): React.ReactElement {
+  React.useEffect(() => {
+    installAxiosInterceptors(http);
+    processPending(http).catch(() => {});
+  }, []);
+
   return (
     <QueryClientProvider client={Cliente}>
-      <NavigationContainer
-        onStateChange={async () => {
-          const tokenExists = await hasAuthToken();
-          setAuthed(tokenExists);
-        }}
-      >
-        {checking ? null : (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {!authed && (
-            <Stack.Screen name="LoginRegistro" component={LoginRegistroScreen} />
-          )}
-          {authed && (
-            <Stack.Screen name="HomeTabs" component={TabsPrincipales} />
-          )}
-          <Stack.Screen name="DetalleMeta" component={DetalleMetaScreen} options={{ title: 'Detalle de Meta' }} />
-          <Stack.Screen name="CrearEditarMeta" component={CrearEditarMetaScreen} options={{ title: 'Crear/Editar Meta' }} />
-          <Stack.Screen name="ListaEventos" component={ListaEventosScreen} options={{ title: 'Eventos' }} />
-          <Stack.Screen name="DetalleEvento" component={DetalleEventoScreen} options={{ title: 'Detalle de Evento' }} />
-          <Stack.Screen name="CrearEditarEvento" component={CrearEditarEventoScreen} options={{ title: 'Crear/Editar Evento' }} />
-        </Stack.Navigator>
-        )}
-      </NavigationContainer>
+      <AuthProvider>
+        <AppWithNavigation />
+      </AuthProvider>
       <Toast />
     </QueryClientProvider>
   );

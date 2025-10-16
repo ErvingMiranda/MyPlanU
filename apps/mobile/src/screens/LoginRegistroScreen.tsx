@@ -2,13 +2,14 @@ import React from 'react';
 import { View, Text, Button, StyleSheet, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { http, ping, getNetworkErrorMessage } from '../api/http';
-import { storeAuthSession } from '../auth/session';
+import { useAuth } from '../auth/AuthContext';
 import { showError, showSuccess, showInfo } from '../ui/toast';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, any>;
 
 export default function LoginRegistroScreen({ navigation }: Props): React.ReactElement {
+  const { login } = useAuth();
   const [Correo, SetCorreo] = React.useState('demo@example.com');
   const [Nombre, SetNombre] = React.useState('Demo');
   const [Contrasena, SetContrasena] = React.useState('demo123');
@@ -35,15 +36,14 @@ export default function LoginRegistroScreen({ navigation }: Props): React.ReactE
       if (Modo === 'registro') {
         const r = await http.post('/auth/registro', { Correo, Nombre, Contrasena });
         const token = r.data.access_token;
-        await storeAuthSession(token);
+        await login(token);
         showSuccess('Registrado');
       } else {
         const r = await http.post('/auth/login', { Correo, Contrasena });
         const token = r.data.access_token;
-        await storeAuthSession(token);
+        await login(token);
         showSuccess('Sesión iniciada');
       }
-      navigation.replace('HomeTabs');
     } catch (e: any) {
       const detail = e?.response?.data?.detail;
       if (detail) {
