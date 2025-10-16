@@ -1,524 +1,240 @@
-# MyPlanU
-MyPlanU v0.18.0 (en desarrollo)
-=================
+# MyPlanU v0.19.0 (en desarrollo)
 
-Descripcion
------------
-MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Este repositorio es un monorepo con backend (FastAPI + SQLModel) y app movil (Expo + TypeScript), con convenciones en español y arquitectura MSV.
+MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Este repositorio es un monorepo que contiene:
 
-Estructura del Monorepo
------------------------
-- apps/
-  - api/ (FastAPI + SQLModel + SQLite)
-  - mobile/ (Expo React Native + TypeScript)
-- packages/
-  - shared-types/ (placeholder para tipos compartidos)
-- .editorconfig, .gitignore, README.md
+-   **Backend**: API RESTful construida con FastAPI y SQLModel.
+-   **App Móvil**: Aplicación para iOS y Android desarrollada con Expo (React Native) y TypeScript.
 
-Convenciones y Arquitectura (MSV)
----------------------------------
-- Nombres de codigo en espanol, sin tildes ni letra eñe (ej.: Correo, PropietarioId, TipoMeta).
-- PascalCase para clases, variables, funciones y atributos en backend y movil.
-- Arquitectura Models–Services–Views (MSV):
-  - Models: definiciones de datos y mapeos (SQLModel en backend, tipos en movil).
-  - Services: reglas de negocio y validaciones.
-  - Views: endpoints (FastAPI) y pantallas (React Native).
+El proyecto sigue convenciones de código en español y una arquitectura MSV (Models-Services-Views).
 
-Requisitos
-----------
-- Python 3.11+
-- Node.js 18+
-- Expo CLI
+## Estructura del Repositorio
 
-Como Ejecutar
--------------
-Backend (API)
-1) Crear y activar venv, instalar requirements, correr uvicorn y probar `/salud`:
+```
+/
+├── apps/
+│   ├── api/      # Backend en FastAPI
+│   └── mobile/   # App móvil en Expo
+├── packages/
+│   └── shared-types/ # Tipos compartidos (placeholder)
+└── docs/
+    └── ...         # Documentación adicional
+```
+
+## Requisitos Previos
+
+-   Python 3.11+
+-   Node.js 18+
+-   [Expo CLI](https://docs.expo.dev/get-started/installation/)
+
+## Instrucciones de Inicio
+
+Sigue estos pasos para levantar el entorno de desarrollo local.
+
+### 1. Backend (API)
+
+Ejecuta los siguientes comandos desde la raíz del proyecto:
 
 ```bash
+# 1. Navega al directorio de la API
 cd apps/api
+
+# 2. Crea y activa un entorno virtual
 python -m venv .venv
 source .venv/bin/activate
-pip install -U pip
+
+# 3. Instala las dependencias
 pip install -r requirements.txt
+
+# 4. Inicia el servidor
 uvicorn app.main:Aplicacion --reload --host 0.0.0.0 --port 8000
-# Probar salud
-curl http://127.0.0.1:8000/salud
 ```
 
-Movil (Expo)
-1) Instalar dependencias y arrancar Expo:
+Para verificar que el backend funciona, abre tu navegador o usa `curl` en la siguiente URL:
+`http://127.0.0.1:8000/health`
+
+### 2. App Móvil (Expo)
+
+En una nueva terminal, ejecuta los siguientes comandos desde la raíz del proyecto:
 
 ```bash
+# 1. Navega al directorio de la app móvil
 cd apps/mobile
+
+# 2. Instala las dependencias
 npm install
-npx expo start
+
+# 3. Inicia el servidor de desarrollo de Expo
+npm start
 ```
 
-Nota sobre API_URL
-------------------
-Si el emulador/dispositivo no accede a localhost, configura la URL del backend en el cliente movil usando la variable de entorno de Expo:
+Esto abrirá el panel de Metro Bundler, donde podrás escanear el código QR con la app de Expo Go en tu dispositivo móvil o ejecutar la app en un simulador.
 
-```bash
-export EXPO_PUBLIC_API_URL="http://<IP_LOCAL>:8000"
-```
+> **Nota importante:** Para que la app móvil pueda comunicarse con tu backend local, asegúrate de que la variable de entorno `EXPO_PUBLIC_API_URL` esté configurada correctamente o ajústala en la pantalla de "Configuración" de la app. Por ejemplo: `export EXPO_PUBLIC_API_URL="http://<TU_IP_LOCAL>:8000"`.
 
-Changelog por version
----------------------
+<details>
+<summary>📚 Historial de Versiones (Changelog)</summary>
 
-v0.1
-- Monorepo inicial con apps/api (FastAPI + SQLModel) y apps/mobile (Expo + TS), .editorconfig y .gitignore.
-- Endpoint salud y README v0.1.
-
-v0.2
-- Backend base en español y PascalCase.
-- Modelos Usuario y Meta, soft delete, timestamps y validaciones.
-- Rutas en español: /salud, /usuarios, /metas.
-
-v0.3
-- Refactor: capa Services separada (UsuariosService, MetasService).
-- Manejo de correo duplicado con 409 y mejoras de validacion.
-- README v0.3 con TODOs (roles y cascadas).
-
-v0.4
-- App movil base: navegacion inicial (Stack + Tabs) y React Query.
-- Pantallas: LoginRegistro, Principal (lista metas), DetalleMeta, CrearEditarMeta, Notificaciones, Configuracion.
-- Cliente API y configuracion EXPO_PUBLIC_API_URL.
-
-v0.5
-- Flujos de navegacion conectados:
-  - LoginRegistro → (replace) → Principal.
-  - Principal → DetalleMeta (tocar meta).
-  - Principal → CrearEditarMeta (boton "+").
-  - Principal → Notificaciones y → Configuracion (botones).
-  - Notificaciones → DetalleMeta (mock) o volver a Principal.
-  - DetalleMeta → CrearEditarMeta (boton "Editar").
-  - Configuracion → volver a Principal con "Guardar" o "Cancelar".
-  - Principal → LoginRegistro (boton "CerrarSesion").
-
-v0.6
-- Backend: modelos y CRUD de Evento y Recordatorio con soft delete.
-- Modelos:
-  - Evento(Id, MetaId -> Meta, PropietarioId -> Usuario, Titulo, Descripcion=None, Inicio, Fin, Ubicacion=None, CreadoEn, ActualizadoEn=None, EliminadoEn=None)
-  - Recordatorio(Id, EventoId -> Evento, FechaHora, Canal in ['Local','Push'], Enviado=False, CreadoEn, EliminadoEn=None)
-- Reglas:
-  - Inicio < Fin.
-  - Meta y Propietario deben existir y no estar eliminados.
-  - No crear Recordatorio en el pasado.
-  - Al borrar Evento (soft), marcar Recordatorios relacionados como EliminadoEn.
-- Rutas REST en español: /eventos, /recordatorios (GET/POST/PATCH/DELETE), y /salud se mantiene igual.
-
-v0.7
-- Servicios y permisos base:
-  - Enum RolParticipante: ['Dueno','Colaborador','Lector'].
-  - Permisos: Dueno = CRUD total; Colaborador = crear/leer/actualizar; Lector = solo lectura.
-  - Bloquear eliminar si rol != Dueno.
-  - Reglas vigentes: Inicio < Fin; Recordatorio no en pasado; existencia de Meta/Propietario/Evento.
-
-v0.8
-- App movil: lista y detalle de eventos; crear/editar.
-- Pantallas nuevas: ListaEventosScreen, DetalleEventoScreen, CrearEditarEventoScreen.
-- Navegacion: desde PrincipalScreen → "VerEventos" abre ListaEventosScreen.
-- Interaccion:
-  - Lista toca item → DetalleEventoScreen (muestra Titulo, Inicio, Fin, etc.).
-  - Boton "Editar" → CrearEditarEventoScreen con datos pre-cargados.
-  - Validacion UI simple: Inicio < Fin.
-- API consumida: GET /eventos; POST/PATCH /eventos para crear/editar (sin permisos reales aun).
-
-v0.9
-- Backend:
-  - Recordatorio ahora tiene campo opcional Mensaje.
-  - Nuevo endpoint: GET /recordatorios/proximos?dias=7 para listar recordatorios futuros (por defecto 7 dias).
-- Movil:
-  - NotificacionesScreen ahora lista recordatorios proximos desde la API y muestra un contador de "tiempo restante" (min/horas).
-  - Formulario rapido para crear un Recordatorio (EventoId, FechaHora en ISO, Mensaje opcional) y refrescar la lista.
-- Nota TODO: Integrar Expo Notifications (notificaciones locales) en la siguiente version.
-
-v0.10
-- Backend:
-  - Nuevo modelo ParticipanteEvento(Id, EventoId -> Evento, UsuarioId -> Usuario, Rol in ['Dueno','Colaborador','Lector'], CreadoEn).
-  - Reglas: un Evento debe tener exactamente un Dueno; Colaborador/Lector opcionales. Si Meta es 'Colectiva', TODO validar al cerrar que exista al menos un Colaborador.
-  - Servicio ParticipantesService: AgregarParticipante, CambiarRol, QuitarParticipante (no permite quitar Dueno si no hay transferencia).
-  - Rutas:
-    - GET /eventos/{Id}/participantes
-    - POST /eventos/{Id}/participantes (agrega participante con rol)
-    - PATCH /participantes/{Id} (cambiar rol)
-    - DELETE /participantes/{Id}
-  - EventosService: al eliminar evento, se dejo TODO para notificar a participantes.
-- Movil:
-  - DetalleEventoScreen muestra seccion de Participantes (mock temporal) y boton "AgregarParticipante" (placeholder sin logica).
-
-v0.11
-- Backend:
-  - Repeticion en Evento y Recordatorio: campos FrecuenciaRepeticion ('Diaria','Semanal','Mensual'), IntervaloRepeticion (int), DiasSemana (CSV, ej. "Lun,Mie").
-  - Proyeccion de ocurrencias sin persistir: GET /eventos/proximos?Desde=...&Hasta=... devuelve ocurrencias (Titulo, Inicio, Fin, EventoId).
-  - Recordatorio acepta tambien repeticion y puede calcular proximas fechas (no se crean en pasado; solo proximas).
-- Criterios rapidos:
-  - Crear Evento semanal con DiasSemana=['Lun','Mie'] y consultar /eventos/proximos devuelve ocurrencias en esos dias dentro del rango.
-  - Recordatorio con repeticion calcula proximas fechas dentro del rango futuro.
-
-v0.12
-- Backend (zonas horarias por usuario):
-  - Usuario ahora tiene campo ZonaHoraria (IANA, ej. "America/Mexico_City"), por defecto 'UTC'.
-  - Los endpoints de eventos y recordatorios aceptan parametros opcionales para manejar zonas horarias:
-    - ZonaHorariaEntrada: al crear/editar (o al consultar rangos) si las fechas son "naive", se interpretan en esta zona y se almacenan en UTC.
-    - UsuarioId y/o ZonaHoraria: para respuestas, las fechas se devuelven en ISO8601 con offset convertido a la zona del usuario (si no se provee, se usa UTC).
-  - Endpoints actualizados: GET/POST/PATCH /eventos, GET /eventos/{Id}, GET /eventos/proximos, GET/POST/PATCH /recordatorios, GET /recordatorios/{Id}, GET /recordatorios/proximos.
-- Movil:
-  - Nueva preferencia local de zona horaria (detecta la del dispositivo por defecto) y pantalla Configuracion permite establecerla y persistirla en el backend (PATCH /usuarios/{Id}).
-  - Cliente API envia automaticamente ZonaHoraria/ZonaHorariaEntrada y UsuarioId al consultar/crear/editar, y muestra fechas ya ajustadas por el backend.
-- Criterios rapidos:
-  - Al cambiar la zona horaria en Configuracion y refrescar Lista/Detalle de eventos, las horas se muestran con el offset correcto de la zona.
-  - Los recordatorios proximos muestran su FechaHora con el offset de la zona del usuario y el contador "tiempo restante" coincide.
-
-v0.13
-- Soft delete con recuperacion (undo):
-  - Nuevos servicios y endpoints para recuperar Meta, Evento y Recordatorio:
-    - POST /metas/{Id}/recuperar
-    - POST /eventos/{Id}/recuperar
-    - POST /recordatorios/{Id}/recuperar
-  - Reglas: no se puede recuperar un hijo si su padre esta eliminado (primero recuperar la Meta, luego el Evento, luego el Recordatorio).
-  - Bitacora: TODO registrar quien recupera y cuando.
-- Movil:
-  - En DetalleMeta y DetalleEvento, si el recurso esta eliminado se muestra boton "Recuperar" (placeholder de flujo admin/lista de eliminados).
-- Criterios rapidos:
-  - Eliminar una Meta y sus Eventos (soft), luego recuperar primero la Meta y despues los Eventos.
-  - Intentar recuperar Evento con Meta eliminada debe fallar con mensaje claro.
-
-v0.13.1
-- Backend (papelera de eliminados):
-  - Nuevas rutas de solo lectura para listar elementos con soft delete:
-    - GET /papelera/metas?PropietarioId=&Desde=&Hasta=&UsuarioId=&ZonaHoraria=&ZonaHorariaEntrada=
-    - GET /papelera/eventos?PropietarioId=&MetaId=&Desde=&Hasta=&UsuarioId=&ZonaHoraria=&ZonaHorariaEntrada=
-    - GET /papelera/recordatorios?EventoId=&Desde=&Hasta=&UsuarioId=&ZonaHoraria=&ZonaHorariaEntrada=
-  - Todas regresan fechas en ISO8601 ajustadas a la zona indicada (o la del UsuarioId) igual que el resto de endpoints.
-- Movil:
-  - Nueva pantalla "Papelera" con pestañas Metas/Eventos/Recordatorios. Permite ver EliminadoEn y recuperar cada item.
-  - Manejo de errores al recuperar (muestra mensaje del backend cuando aplica, ej. dependencias no recuperadas).
-
-# MyPlanU
-
-## MyPlanU v0.16.0 (en desarrollo)
-  - Eventos eliminados de una meta especifica:
-    curl "http://localhost:8000/papelera/eventos?MetaId=123"
-## Descripción
-
-MyPlanU es una agenda inteligente y colaborativa para estudiantes y equipos. Este repositorio es un monorepo con backend (FastAPI + SQLModel) y app móvil (Expo + TypeScript), con convenciones en español y arquitectura MSV.
-
-Prueba rápida en móvil (dev)
-----------------------------
-1) Backend (API):
-  - En la raíz del repo, crea un entorno y levanta la API en 0.0.0.0:8000.
-    - Endpoints de salud: `GET /health` y `GET /salud`.
-  - Variable de CORS opcional: `MYPLANU_CORS_ORIGINS` (lista separada por comas) si necesitas restringir orígenes.
-
-2) App móvil (Expo):
-  - En `apps/mobile`, instala dependencias y ejecuta `expo start` (o `--tunnel` para compartir por Internet y escanear QR desde el teléfono).
-  - La app lee `EXPO_PUBLIC_API_URL` (en `.env` o `app.json`). Si cambias esta variable, reinicia Expo para que surta efecto.
-
-3) Configurar URL del backend desde la app (sin reconstruir):
-  - En la pantalla “Configuración” hay un campo “API_BASE_URL (solo dev)”.
-  - Escribe la URL accesible desde tu dispositivo (por ejemplo, `http://<IP_LAN>:8000` o una URL pública) y pulsa “Guardar”.
-  - Luego pulsa “Probar conexión” para verificar. Si ves “✅ OK”, procede a registro/login.
-
-Notas:
-- En simuladores: Android usa `10.0.2.2:8000` y iOS `localhost:8000` por defecto si no defines `EXPO_PUBLIC_API_URL`.
-- En dispositivo físico, suele ser necesario usar un túnel (`expo start --tunnel`) y una URL pública o la IP LAN del host.
-
-v0.13.2
-  - Movil: nuevo cliente HTTP en `apps/mobile/src/api/http.ts` (Axios) que lee API_BASE_URL y EXPO_PUBLIC_API_URL.
-  - Agrega `apps/mobile/.env.example` con API_BASE_URL. En simulador usa 127.0.0.1; en dispositivo fisico, usa la IP LAN de tu maquina (ej. http://192.168.1.10:8000).
-
-- Pantalla Configuracion con conectividad:
-  - Nuevo botón “Probar conexión” que llama ping() y muestra estado.
-  - Cliente Axios ahora instala interceptores (solo log en dev) y se centraliza el mapeo de errores en `src/api/errors.ts`.
-  - Reemplazo de Alerts por toasts en pantallas de Configuración y Crear/Editar Meta para feedback no intrusivo.
-  - Nuevos helpers `showSuccess/showError/showInfo` y provider global `<Toast />` integrados.
-
-Pruebas (app móvil)
-```bash
-cd apps/mobile
-```
-1. Crear y activar venv, instalar requirements, correr uvicorn y probar `/salud`:
-- Cobertura básica incluida:
-  - Servicios de metas (Axios) con escenarios de éxito, 404 y timeout (axios-mock-adapter).
-  - Cliente fetch de recordatorios/metas con mocks de fetch manuales (éxito y 409).
-
-v0.13.9
-- Telemetría dev (opcional):
-  - Nuevo módulo `src/telemetry.ts` con `logEvent(name, data)` y buffer en memoria (200 eventos).
-  - Activado solo en `__DEV__` o si `EXPO_PUBLIC_TELEMETRY=dev`.
-  - Eventos instrumentados: `network_ping`, `prefs_save_*`, `goal_save_*`, `recover_*` (meta/evento/recordatorio).
-
-v0.14.0
-- Offline mínimo (metas):
-  - Cache local de la lista de metas y cola de operaciones (crear/actualizar) usando AsyncStorage.
-1. Instalar dependencias y arrancar Expo:
-  - Al iniciar la app se intenta procesar la cola automáticamente.
-  - Nuevo botón en Configuración: “Reintentar sync offline” para forzar la sincronización manual y ver resultado por toasts.
-
-v0.14.1 (Fixes y coherencia)
-- Backend:
-  - Version de la API alineada al changelog (FastAPI `version=0.14.1`).
-  - Parametrización de CORS mediante variable de entorno `MYPLANU_CORS_ORIGINS` (lista separada por comas, fallback `*`).
-  - Endpoint `/papelera/recordatorios` corrigió uso errado de `EventosService` y ahora emplea `RecordatoriosService.ListarRecordatoriosEliminados`.
-Si el emulador/dispositivo no accede a localhost, configura la URL del backend en el cliente móvil usando la variable de entorno de Expo:
-  - `PrincipalScreen` ahora usa `services/goals.listGoals()` (cache + cola offline) en lugar de `ClienteApi.ObtenerMetas` asegurando coherencia con la funcionalidad offline de v0.14.0.
-- Documentación:
-  - Encabezado actualizado a `MyPlanU v0.14.1` y sección de fixes añadida.
-
-v0.15.0 (JSON bodies y contratos unificados)
-- Backend:
----
-
-## Changelog por versión
-  - Endpoints POST/PATCH de `/metas`, `/eventos` y `/recordatorios` ahora aceptan cuerpos JSON en lugar de query params.
-  - Campos de repetición (`FrecuenciaRepeticion`, `IntervaloRepeticion`, `DiasSemana`) se envían en objeto `Repeticion`. `DiasSemana` se recibe como lista (ej. `["Lun","Mie"]`) y se almacena como CSV interno.
-  - Estandarización de mensajes de error: patrones `MetaInvalida: ...`, `EventoInvalido: ...`, `RecordatorioInvalido: ...`.
-- Móvil:
-  - Cliente `ClienteApi` migrado a POST/PATCH JSON para metas, eventos y recordatorios (incluye repetición y zonas horarias en body).
-  - Servicios `services/goals` actualizados a JSON y cola offline (`offline.ts`) procesando create/update de metas con body JSON.
-- Migración / Breaking Changes:
-  - Antes: `POST /metas?PropietarioId=1&Titulo=...&TipoMeta=...` → Ahora: `POST /metas` con JSON.
-  - Antes: `POST /eventos?...Inicio=...&Fin=...` → Ahora: `POST /eventos` con JSON (incluye `Repeticion`).
-  - Antes: `POST /recordatorios?...` → Ahora: `POST /recordatorios` con JSON.
-  - Cualquier cliente que dependiera de query strings para crear/actualizar debe actualizarse.
-- TODO restante antes de cerrar v0.15.0:
-  - Revisar roles/permisos (fuera de alcance inmediato). 
-  - Revisar consistencia de conversion de zonas (documentado, funcional actual).
-
-Ejemplos cURL (nuevos contratos JSON)
--------------------------------------
-Crear Meta:
-```bash
-curl -X POST http://localhost:8000/metas \
-  -H 'Content-Type: application/json' \
-  ## Pruebas (app móvil)
-
-  - Stack: Jest + jest-expo.
-    "Titulo": "Estudiar Algebra",
-   Ejecutar pruebas en `apps/mobile`:
-    "Descripcion": "Repasar capitulos 1-3"
-  }'
-```
-
-Actualizar Meta (solo titulo):
-```bash
-  -H 'Content-Type: application/json' \
-  -d '{ "Titulo": "Estudiar Algebra II" }'
-```
-
-  ## Errores estandarizados (patrones y ejemplos)
-```bash
-  El backend expone mensajes de error consistentes en `detail` para facilitar el mapeo en el cliente. Formatos clave:
-  -H 'Content-Type: application/json' \
-  -d '{
-    "MetaId": 10,
-    "PropietarioId": 1,
-    "Titulo": "Sesion de estudio",
-    "Inicio": "2025-09-25T14:00:00",
-    "Fin": "2025-09-25T15:00:00",
-    "Repeticion": { "Frecuencia": "Semanal", "Intervalo": 1, "DiasSemana": ["Lun","Mie"] },
-    "ZonaHorariaEntrada": "America/Mexico_City"
-  }'
-```
-
-Actualizar Evento (cambiar horario):
-```bash
-curl -X PATCH http://localhost:8000/eventos/55 \
-  -H 'Content-Type: application/json' \
-  -d '{ "Inicio": "2025-09-26T14:00:00", "Fin": "2025-09-26T15:30:00" }'
-```
-
-Crear Recordatorio:
-```bash
-curl -X POST http://localhost:8000/recordatorios \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "EventoId": 55,
-    "FechaHora": "2025-09-26T13:50:00",
-    "Canal": "Local",
-    "Mensaje": "Preparar cuaderno",
-    "ZonaHorariaEntrada": "America/Mexico_City"
-  }'
-```
-
-Actualizar Recordatorio (mensaje):
-```bash
-curl -X PATCH http://localhost:8000/recordatorios/77 \
-  -H 'Content-Type: application/json' \
-  -d '{ "Mensaje": "Recordar materiales" }'
-```
-
-Notas sobre Zonas Horarias:
-- `ZonaHorariaEntrada`: interpreta campos de fecha/hora del body (naive) en esa zona y los persiste en UTC.
-- `ZonaHoraria`: controla la zona en la que se devuelven las fechas (si no se pasa, se usa la del `UsuarioId` o UTC).
-
-TODOs siguientes (planeados)
-----------------------------
-- Endpoints batch para la cola offline (v0.19.0).
-- Integrar Expo Notifications con la sincronización offline/online.
-- Documentar y limpiar los flujos offline (formato y organización de código).
-- Permisos por rol: Dueno, Colaborador, Lector (validación en Services).
-
-v0.15.1 (Hardening repetición y pruebas)
-  ## Ejemplos cURL autenticación
-
-  Registro (dev):
-  - `DiasSemana` ahora se expone como lista en todas las respuestas (antes CSV). La conversión lista↔CSV se centralizó en Services.
-  - Validación de `IntervaloRepeticion` movida a Services para emitir `EventoInvalido` / `RecordatorioInvalido` (400) en lugar de 422 de esquema.
-  - Respuestas de eventos/recordatorios normalizan repetición y mantienen patrones de error estandarizados.
-  - Nuevas pruebas: proyección semanal con DiasSemana, intervalos negativos → error 400, persistencia de DiasSemana en recordatorios.
-- Móvil:
-  - Cola offline intacta; nuevas pruebas Jest para flujo base, reintento parcial, orden create→update y persistencia tras reinicio.
-  - Actualizado a consumir `DiasSemana` como lista (sin dependencia de CSV legacy).
-- Documentación:
-  - Sección de errores estandarizados agregada.
-  - Changelog marca 0.15.0 como estable y describe cambios de 0.15.1.
-- Notas:
-  - Breaking: clientes que esperaban `DiasSemana` CSV deben adaptarse (móvil ya alineado).
-  - Preparación para futuras mejoras de permisos y autenticación.
-
-Errores estandarizados (patrones y ejemplos)
--------------------------------------------
-El backend expone mensajes de error consistentes en `detail` para facilitar el mapeo en el cliente. Formatos clave:
-
-1. Validaciones de dominio (400):
-   - `MetaInvalida: <motivo>`
-```json
-{
-  "detail": "EventoInvalido: IntervaloRepeticion debe ser > 0"
-}
-```
-```json
-{
-  "detail": "RecordatorioInvalido: FechaHora no puede estar en el pasado"
-}
-```
-
-2. Recurso no encontrado (404):
-```json
-{
-  "detail": "Meta no encontrada"
-}
-```
-```json
-{
-  "detail": "Evento no encontrado"
-}
-```
-
-3. Conflictos (409) (ej. duplicados):
-```json
-{
-  "detail": "MetaInvalida: ya existe una meta con ese Titulo para el Propietario"
-}
-```
-
-4. Errores de validación de entrada (422) (Pydantic) se reservan para formato JSON o tipos erróneos, pero la mayoría de reglas de negocio se trasladaron a Services para devolver 400 con los patrones anteriores.
-
-5. Eliminados/recuperación (400/409):
-```json
-{
-  "detail": "EventoInvalido: no se puede recuperar porque la Meta padre sigue eliminada"
-}
-```
-
-Buenas prácticas cliente:
-- Mostrar `detail` directamente en toasts si inicia con `<Algo>Invalido:` recortando el prefijo opcionalmente.
-- Reintentos automáticos sólo para errores de red (timeout, offline) y no para 400/409.
-- Mapear 404 a un estado de "Recurso eliminado o inexistente" y ofrecer navegación atrás.
-
-v0.16.0 (Autenticación JWT básica)
-- Backend:
-  - Nuevos endpoints `/auth/registro` y `/auth/login`.
-  - Registro guarda contraseña hasheada (bcrypt via passlib) y devuelve token JWT.
-  - Login valida credenciales y entrega `{ access_token, token_type="bearer" }`.
-  - Dependencia `get_current_user` protege `/metas`, `/eventos`, `/recordatorios` y `/papelera` (401 si token inválido / ausente, 403 si acceso a recurso de otro usuario según reglas actuales de propietario).
-  - Campo `ContrasenaHash` agregado a `Usuario` (no se retorna en respuestas).
-- Móvil:
-  - Pantalla `LoginRegistroScreen` con modos registro / login.
-  - Token persistido en AsyncStorage y agregado en header `Authorization: Bearer <token>` por interceptor Axios.
-  - Botón "Cerrar Sesión" en Configuración que limpia token y redirige a pantalla de login.
-  - Navegación condicionada al estado de autenticación (si no hay token → login, si hay token → tabs principales).
-- Seguridad / Notas:
-  - SECRET_KEY y ACCESS_TOKEN_EXPIRE_MINUTES configurables por variables de entorno (fallback dev inseguros si no se definen).
-  - Recomendado rotar secret y mover a almacén seguro en despliegues productivos.
-  - Próximos pasos sugeridos: refresh tokens, revocación, roles/granularidad de permisos.
-
-Ejemplos cURL autenticación
----------------------------
-Registro (dev):
-```bash
-curl -X POST http://localhost:8000/auth/registro \
-  -H 'Content-Type: application/json' \
-  -d '{"Correo":"demo@example.com","Nombre":"Demo","Contrasena":"demo123"}'
-```
-
-Login:
-```bash
-curl -X POST http://localhost:8000/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"Correo":"demo@example.com","Contrasena":"demo123"}'
-```
-
-Usar token para listar metas:
-```bash
-TOKEN="$(curl -s -X POST http://localhost:8000/auth/login -H 'Content-Type: application/json' -d '{"Correo":"demo@example.com","Contrasena":"demo123"}' | jq -r .access_token)"
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/metas
-```
-
-Errores esperados auth:
-- 401 Unauthorized: token ausente, expirado o inválido (`{"detail":"Token invalido"}` o `{"detail":"Credenciales invalidas"}`).
-- 403 Forbidden: acceso a recurso que no pertenece al usuario autenticado (`{"detail":"Forbidden"}`).
-- 409 Conflict: correo ya registrado en `/auth/registro`.
-
-<<<<<<< HEAD
-v0.16.1 (Ajustes post-autenticación)
-- Backend y pruebas:
-  - Nuevo helper `ObtenerEngine()` expone el engine de SQLModel para reutilizarlo en pruebas y utilidades.
-  - Las pruebas de eventos y recordatorios ahora usan un helper de autenticación que crea usuario y token antes de invocar los endpoints protegidos.
-- Móvil:
-  - `fetchJson()` incluye automáticamente el header `Authorization` cuando hay token almacenado, alineando las llamadas `fetch` con el cliente Axios.
-  - Pantalla Crear/Editar Meta reemplaza el campo libre de tipo por un selector accesible entre "Individual" y "Colectiva".
-  - `services/goals` normaliza `TipoMeta`, limita los valores permitidos y reutiliza la constante `GOAL_TYPES` en UI y capa offline.
-
-v0.17.0 (Permisos y cascadas básicas)
-- Backend:
-  - Los servicios de Metas, Eventos y Recordatorios validan los permisos según el rol real del solicitante e informan errores 403/409 coherentes.
-  - El borrado de Metas aplica cascada lógica a Eventos y Recordatorios; eliminar Usuarios también marca sus recursos asociados y limpia participaciones.
-  - Las Metas "Colectiva" sólo se pueden cerrar si existe al menos un colaborador activo registrado en la meta.
-- Móvil:
-  - El cliente guarda el `userId` decodificando el JWT para enviar `PropietarioId` correcto y mostrar mensajes de autorización desde la API.
-  - Las pantallas Detalle/Crear Meta muestran errores de permisos con toasts consistentes.
-- Calidad:
-  - Pruebas API cubren permisos de colaboradores y cascadas, documentando los nuevos flujos en este README.
-
-v0.18.0 (Auditoría y notificaciones)
-- Backend:
-  - Se añade la tabla `BitacoraRecuperacion` y se registran automáticamente todas las recuperaciones de metas, eventos y recordatorios.
-  - El borrado de eventos crea notificaciones para dueño y participantes, además de ajustar las conversiones de zona horaria usando la zona del usuario autenticado como fallback.
-  - Nuevos endpoints `/bitacora/recuperaciones` y `/notificaciones/sistema` con marcado de lectura.
-- Móvil:
-  - `DetalleEventoScreen` consume participantes reales desde la API y muestra estados de carga/errores.
-  - La app consulta periódicamente las notificaciones del backend y muestra alertas locales cuando hay eventos eliminados pendientes.
-- Documentación y calidad:
-  - Se publica la guía `docs/monitoring_auditoria.md` y se incorporan pruebas automatizadas para bitácora y notificaciones.
-
-v0.19.0 (Experiencia móvil y sincronización)
+### v0.19.0 (Experiencia móvil y sincronización)
 - Endpoints complementarios para la cola offline en backend.
 - Integración de Expo Notifications y sincronización offline ↔ online.
 - Garantizar conectividad desde dispositivos físicos y mejoras de formato/código.
 - Documentación de flujos offline y limpieza general.
-=======
-v0.19.0 (propuesta, en progreso)
-- Backend:
-  - Nuevos endpoints batch: `POST /sync/metas` y `POST /sync/eventos` para procesar colas offline con operaciones `create`/`update`.
-  - Contrato: `{ operations: [{ kind, tempId?, targetId?, data }], sequential: true, continueOnError: true }`.
-  - Respuesta: `{ results: [{ index, kind, ok, id?, tempId?, targetId?, error? }], mappings: { "-123": 45 } }`.
-  - `GET /sync/estado` devuelve información básica de estado del servidor para reconciliación.
-- Móvil:
-  - Cola separada por entidad y `processPendingBatches()` que aprovecha los endpoints batch manteniendo compatibilidad con el flujo actual.
-  - Próximo: flujos offline en pantallas de eventos y notificaciones locales con Expo Notifications.
->>>>>>> 324ac6a (mobile: arregla ConfiguracionScreen y añade sync offline batch; test: ajusta jest para msw; chore: instala deps y arranca Expo; backend: endpoints /sync/* y tests batch (v0.19.0 parcial))
+
+### v0.18.0 (Auditoría y notificaciones)
+- **Backend**:
+  - Se añade la tabla `BitacoraRecuperacion` y se registran automáticamente todas las recuperaciones.
+  - El borrado de eventos crea notificaciones para dueño y participantes.
+  - Nuevos endpoints `/bitacora/recuperaciones` y `/notificaciones/sistema`.
+- **Móvil**:
+  - `DetalleEventoScreen` consume participantes reales desde la API.
+  - La app consulta periódicamente las notificaciones del backend.
+- **Documentación**:
+  - Se publica la guía `docs/monitoring_auditoria.md`.
+
+### v0.17.0 (Permisos y cascadas básicas)
+- **Backend**:
+  - Servicios validan permisos según el rol del solicitante (403/409).
+  - Borrado de Metas aplica cascada lógica a Eventos y Recordatorios.
+  - Metas "Colectiva" solo se pueden cerrar si tienen al menos un colaborador.
+- **Móvil**:
+  - Cliente guarda `userId` desde el JWT para enviar `PropietarioId` correcto.
+  - Pantallas muestran errores de permisos con toasts.
+
+### v0.16.1 (Ajustes post-autenticación)
+- **Backend**:
+  - Helper `ObtenerEngine()` para reutilizar el engine de SQLModel en pruebas.
+  - Pruebas de API usan helper de autenticación para crear usuario y token.
+- **Móvil**:
+  - `fetchJson()` incluye automáticamente el header `Authorization`.
+  - Selector de tipo de meta ("Individual" / "Colectiva") en lugar de campo libre.
+
+### v0.16.0 (Autenticación JWT básica)
+- **Backend**:
+  - Nuevos endpoints `/auth/registro` y `/auth/login`.
+  - Contraseñas hasheadas con `bcrypt`.
+  - Endpoints principales protegidos con `get_current_user`.
+- **Móvil**:
+  - Pantalla `LoginRegistroScreen` con modos para registro y login.
+  - Token JWT persistido en AsyncStorage y añadido a las peticiones con un interceptor de Axios.
+  - Navegación condicionada al estado de autenticación.
+
+### v0.15.1 (Hardening repetición y pruebas)
+- **Backend**:
+  - `DiasSemana` ahora se expone como lista en todas las respuestas.
+  - Validación de `IntervaloRepeticion` movida a Services para emitir errores 400.
+- **Móvil**:
+  - Pruebas Jest para la cola offline.
+  - Cliente actualizado para consumir `DiasSemana` como lista.
+
+### v0.15.0 (JSON bodies y contratos unificados)
+- **Backend**:
+  - Endpoints POST/PATCH de metas, eventos y recordatorios migrados a cuerpos JSON.
+  - Estandarización de mensajes de error (`MetaInvalida: ...`).
+- **Móvil**:
+  - Cliente API y servicios `goals` actualizados para enviar datos como JSON.
+- **Breaking Changes**:
+  - La creación y actualización de recursos ahora requiere un cuerpo JSON en lugar de parámetros de consulta.
+
+### v0.14.1 (Fixes y coherencia)
+- **Backend**:
+  - Versión de la API alineada al changelog (`0.14.1`).
+  - CORS parametrizable mediante `MYPLANU_CORS_ORIGINS`.
+  - Corregido endpoint `/papelera/recordatorios`.
+- **Móvil**:
+  - `PrincipalScreen` ahora usa `services/goals.listGoals()` para coherencia con la funcionalidad offline.
+
+### v0.14.0 (Offline mínimo para metas)
+- **Móvil**:
+  - Cache local de la lista de metas y cola de operaciones (crear/actualizar) usando AsyncStorage.
+  - Botón en "Configuración" para reintentar la sincronización manual.
+
+### v0.13.9 (Telemetría dev)
+- **Móvil**:
+  - Nuevo módulo `src/telemetry.ts` con buffer en memoria, activado solo en modo desarrollo.
+  - Eventos instrumentados: `network_ping`, `prefs_save_*`, `goal_save_*`, etc.
+
+### v0.13.2 (Cliente HTTP y conectividad)
+- **Móvil**:
+  - Nuevo cliente HTTP en `apps/mobile/src/api/http.ts` (Axios).
+  - Pantalla "Configuración" con botón para probar la conexión a la API.
+  - Reemplazo de `Alert` por `react-native-toast-message` para notificaciones.
+
+### v0.13.1 (Papelera de eliminados)
+- **Backend**:
+  - Nuevas rutas de solo lectura para listar elementos con soft delete (`/papelera/metas`, `/papelera/eventos`, etc.).
+- **Móvil**:
+  - Nueva pantalla "Papelera" con pestañas para ver y recuperar ítems eliminados.
+
+### v0.13 (Soft delete con recuperación)
+- **Backend**:
+  - Nuevos endpoints para recuperar metas, eventos y recordatorios (`POST /metas/{Id}/recuperar`).
+  - Regla: no se puede recuperar un hijo si su padre está eliminado.
+- **Móvil**:
+  - Botón "Recuperar" en las pantallas de detalle para ítems eliminados.
+
+### v0.12 (Zonas horarias)
+- **Backend**:
+  - Campo `ZonaHoraria` añadido al modelo `Usuario`.
+  - Endpoints aceptan `ZonaHorariaEntrada` para interpretar fechas y las devuelven convertidas a la zona del usuario.
+- **Móvil**:
+  - Preferencia de zona horaria local, configurable en la app.
+
+### v0.11 (Repetición de eventos)
+- **Backend**:
+  - Campos de repetición en `Evento` y `Recordatorio` (`FrecuenciaRepeticion`, `IntervaloRepeticion`, `DiasSemana`).
+  - Endpoint para proyectar ocurrencias futuras (`GET /eventos/proximos`).
+
+### v0.10 (Participantes en eventos)
+- **Backend**:
+  - Nuevo modelo `ParticipanteEvento` con roles (`Dueno`, `Colaborador`, `Lector`).
+  - Nuevos endpoints para gestionar participantes de un evento.
+- **Móvil**:
+  - Sección de participantes (mock) en la pantalla de detalle del evento.
+
+### v0.9 (Recordatorios próximos)
+- **Backend**:
+  - Campo opcional `Mensaje` en `Recordatorio`.
+  - Nuevo endpoint `GET /recordatorios/proximos`.
+- **Móvil**:
+  - Pantalla de notificaciones lista los recordatorios próximos desde la API.
+
+### v0.8 (CRUD de eventos en móvil)
+- **Móvil**:
+  - Nuevas pantallas: `ListaEventosScreen`, `DetalleEventoScreen`, `CrearEditarEventoScreen`.
+  - Navegación y consumo de API para eventos.
+
+### v0.7 (Servicios y permisos base)
+- **Backend**:
+  - Enum `RolParticipante` (`Dueno`, `Colaborador`, `Lector`).
+  - Lógica de permisos base en los servicios.
+
+### v0.6 (Modelos de Evento y Recordatorio)
+- **Backend**:
+  - Modelos y CRUD para `Evento` y `Recordatorio` con soft delete.
+  - Reglas de negocio: `Inicio < Fin`, no crear recordatorios en el pasado.
+
+### v0.5 (Flujos de navegación)
+- **Móvil**:
+  - Conexión de la navegación entre todas las pantallas principales.
+
+### v0.4 (Base de la app móvil)
+- **Móvil**:
+  - Estructura inicial con React Navigation y React Query.
+  - Pantallas base: `LoginRegistro`, `Principal`, `DetalleMeta`, etc.
+  - Cliente de API inicial y configuración de `EXPO_PUBLIC_API_URL`.
+
+### v0.3 (Refactor a capa de Servicios)
+- **Backend**:
+  - Creación de la capa de `Services` (`UsuariosService`, `MetasService`) para separar la lógica de negocio de las vistas.
+
+### v0.2 (Backend base)
+- **Backend**:
+  - Modelos `Usuario` y `Meta` con soft delete y timestamps.
+  - Rutas en español: `/usuarios`, `/metas`.
+
+### v0.1 (Monorepo inicial)
+- Creación del monorepo con `apps/api` (FastAPI) y `apps/mobile` (Expo).
+- Endpoint de salud inicial y primera versión del `README.md`.
+
+</details>
 
